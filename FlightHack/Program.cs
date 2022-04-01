@@ -24,24 +24,24 @@ namespace Scraper
             string LegTwoDestinationCityCodeID = "mat-chip-list-input-7";
             string LegTwoDepartureDateID = "mat-input-10";
 
-            // 1st Leg
+            string DumpLegOriginCityCodeID = "mat-chip-list-input-8";
+            string DumpLegDestinationCityCodeID = "mat-chip-list-input-9";
+            string DumpLegDepartureDateID = "mat-input-11";
+
+            // 1st Leg Human Details
             string LegOneOriginCityCode = "GVA;";
             string LegOneDestinationCityCode = "JFK;";
             string LegOneDepartureDate = "10/30/2022";
 
-            // 2nd Leg
+            // 2nd Leg Human Details
             string LegTwoOriginCityCode = LegOneDestinationCityCode;
             string LegTwoDestinationCityCode = LegOneOriginCityCode;
             string LegTwoDepartureDate = "11/06/2022";
 
+            // Dump Leg Human Details
             string DumpLegOriginCityCode = "JNB";
-            string DumpLegOriginCityCodeID = "mat-chip-list-input-8";
-
             string DumpLegDestinationCityCode = "CAI";
-            string DumpLegDestinationCityCodeID = "mat-chip-list-input-9";
-
             string DumpLegDepartureDate = "11/08/2022";
-            string DumpLegDepartureDateID = "mat-input-11";
 
             // Starting Search
             Console.WriteLine("Initiating the browser");
