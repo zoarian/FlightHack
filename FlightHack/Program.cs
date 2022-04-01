@@ -10,27 +10,30 @@ namespace Scraper
         static void Main(string[] args)
         {
             int SleepTimer = 100;
-            string URL = "https://matrix.itasoftware.com/search";
+            string URL = "https://oldmatrix.itasoftware.com/";
 
-            string MultiCityTabID = "mat-tab-label-0-2";
-            string AddFlightButtonXPath = "/html/body/app-root/matrix-search-page/mat-card[1]/mat-card-content/form/matrix-select-flight-tabs/mat-tab-group/div/mat-tab-body[3]/div/matrix-multi-city-search-tab/div/div[2]/mat-chip";
-            string SearchButtonXpath = "/html/body/app-root/matrix-search-page/mat-card[1]/mat-card-content/form/div[2]/button";
+            string ClearCitySuggestion = "javascript:document.getElementsByClassName('gwt-SuggestBoxPopup')[0].setAttribute('hidden','')";
+            string ClearCalendarSuggestion = "javascript: document.getElementsByClassName('dateBoxPopup')[0].setAttribute('hidden', '')";
 
-            string LegOneOriginCityCodeID = "mat-chip-list-input-4";
-            string LegOneDestinationCityCodeID = "mat-chip-list-input-5";
-            string LegOneDepartureDateID = "mat-input-8";
+            string MultiCityTabID = "/html/body/div[1]/div/div/div/div/div/div[2]/div[1]/div/table/tbody/tr/td[1]/div/div/table/tbody/tr[1]/td/table/tbody/tr/td[4]/div";
+            string AddFlightButtonXPath = "/html/body/div[1]/div/div/div/div/div/div[2]/div[1]/div/table/tbody/tr/td[1]/div/div/table/tbody/tr[2]/td/div/div[3]/div/div[4]/div[2]/a";
+            string SearchButtonXpath = "/html/body/div[1]/div/div/div/div/div/div[2]/div[1]/div/table/tbody/tr/td[1]/div/div/div/button";
 
-            string LegTwoOriginCityCodeID = "mat-chip-list-input-6";
-            string LegTwoDestinationCityCodeID = "mat-chip-list-input-7";
-            string LegTwoDepartureDateID = "mat-input-10";
+            string LegOneOriginCityCodeID = "/html/body/div[1]/div/div/div/div/div/div[2]/div[1]/div/table/tbody/tr/td[1]/div/div/table/tbody/tr[2]/td/div/div[3]/div/div[2]/div[1]/div[2]/div/div/div/input";
+            string LegOneDestinationCityCodeID = "/html/body/div[1]/div/div/div/div/div/div[2]/div[1]/div/table/tbody/tr/td[1]/div/div/table/tbody/tr[2]/td/div/div[3]/div/div[2]/div[1]/div[4]/div/div/div/input";
+            string LegOneDepartureDateID = "/html/body/div[1]/div/div/div/div/div/div[2]/div[1]/div/table/tbody/tr/td[1]/div/div/table/tbody/tr[2]/td/div/div[3]/div/div[2]/div[1]/div[5]/div[1]/div[2]/input";
 
-            string DumpLegOriginCityCodeID = "mat-chip-list-input-8";
-            string DumpLegDestinationCityCodeID = "mat-chip-list-input-9";
-            string DumpLegDepartureDateID = "mat-input-11";
+            string LegTwoOriginCityCodeID = "/html/body/div[1]/div/div/div/div/div/div[2]/div[1]/div/table/tbody/tr/td[1]/div/div/table/tbody/tr[2]/td/div/div[3]/div/div[2]/div[2]/div[2]/div/div/div/input";
+            string LegTwoDestinationCityCodeID = "/html/body/div[1]/div/div/div/div/div/div[2]/div[1]/div/table/tbody/tr/td[1]/div/div/table/tbody/tr[2]/td/div/div[3]/div/div[2]/div[2]/div[4]/div/div/div/input";
+            string LegTwoDepartureDateID = "/html/body/div[1]/div/div/div/div/div/div[2]/div[1]/div/table/tbody/tr/td[1]/div/div/table/tbody/tr[2]/td/div/div[3]/div/div[2]/div[2]/div[5]/div[1]/div[2]/input";
+
+            string DumpLegOriginCityCodeID = "/html/body/div[1]/div/div/div/div/div/div[2]/div[1]/div/table/tbody/tr/td[1]/div/div/table/tbody/tr[2]/td/div/div[3]/div/div[2]/div[3]/div[2]/div/div/div/input";
+            string DumpLegDestinationCityCodeID = "/html/body/div[1]/div/div/div/div/div/div[2]/div[1]/div/table/tbody/tr/td[1]/div/div/table/tbody/tr[2]/td/div/div[3]/div/div[2]/div[3]/div[4]/div/div/div/input";
+            string DumpLegDepartureDateID = "/html/body/div[1]/div/div/div/div/div/div[2]/div[1]/div/table/tbody/tr/td[1]/div/div/table/tbody/tr[2]/td/div/div[3]/div/div[2]/div[3]/div[5]/div[1]/div[2]/input";
 
             // 1st Leg Human Details
-            string LegOneOriginCityCode = "GVA;";
-            string LegOneDestinationCityCode = "JFK;";
+            string LegOneOriginCityCode = "GVA";
+            string LegOneDestinationCityCode = "JFK";
             string LegOneDepartureDate = "10/30/2022";
 
             // 2nd Leg Human Details
@@ -49,81 +52,100 @@ namespace Scraper
             IWebDriver driver = new ChromeDriver();
                        driver.Url = URL;
 
+            IJavaScriptExecutor js = (IJavaScriptExecutor)driver;
+            IJavaScriptExecutor js1 = (IJavaScriptExecutor)driver;
+
             Thread.Sleep(SleepTimer*20);
 
-            IWebElement EMultiButton = driver.FindElement(By.Id(MultiCityTabID));
+            IWebElement EMultiButton = driver.FindElement(By.XPath(MultiCityTabID));
             EMultiButton.Click();
 
             Console.WriteLine("Changed Tabs");
 
-            IWebElement EAddFlights = driver.FindElement(By.XPath(AddFlightButtonXPath));
-            EAddFlights.Click();
+            Thread.Sleep(SleepTimer * 10);
 
-            Thread.Sleep(SleepTimer*10);
-
-            EAddFlights.Click();
+            /*            IWebElement EAddFlights = driver.FindElement(By.XPath(AddFlightButtonXPath));
+                        EAddFlights.Click();*/
 
             Console.WriteLine("Added Flight Fields");
 
-            IWebElement ELeg1CityCode = driver.FindElement(By.Id(LegOneOriginCityCodeID));
+            IWebElement ELeg1CityCode = driver.FindElement(By.XPath(LegOneOriginCityCodeID));
             ELeg1CityCode.SendKeys(LegOneOriginCityCode);
-            ELeg1CityCode.SendKeys(Keys.Tab);
+            ELeg1CityCode.SendKeys(Keys.Enter);
 
-            Thread.Sleep(SleepTimer);
+            Thread.Sleep(SleepTimer * 10);
 
-            IWebElement ELeg1DepCode = driver.FindElement(By.Id(LegOneDestinationCityCodeID));
+            js.ExecuteScript(ClearCitySuggestion);
+
+            Thread.Sleep(SleepTimer * 5);
+
+            IWebElement ELeg1DepCode = driver.FindElement(By.XPath(LegOneDestinationCityCodeID));
             ELeg1DepCode.SendKeys(LegOneDestinationCityCode);
-            ELeg1DepCode.SendKeys(Keys.Tab);
+            ELeg1DepCode.SendKeys(Keys.Enter);
 
-            Thread.Sleep(SleepTimer);
+            Thread.Sleep(SleepTimer * 5);
 
-            IWebElement ELeg1DepartureDate = driver.FindElement(By.Id(LegOneDepartureDateID));
+            js1.ExecuteScript(ClearCitySuggestion);
+
+            Thread.Sleep(SleepTimer * 5);
+
+            IWebElement ELeg1DepartureDate = driver.FindElement(By.XPath(LegOneDepartureDateID));
             ELeg1DepartureDate.SendKeys(LegOneDepartureDate);
-            ELeg1DepartureDate.SendKeys(Keys.Tab);
+            ELeg1DepartureDate.SendKeys(Keys.Enter);
 
-            Thread.Sleep(SleepTimer);
+            Thread.Sleep(SleepTimer * 20);
+
+            //js1.ExecuteScript(ClearCalendarSuggestion);
 
             Console.WriteLine("Populated First Leg");
 
-            IWebElement ELeg2CityCode = driver.FindElement(By.Id(LegTwoOriginCityCodeID));
+            IWebElement ELeg2CityCode = driver.FindElement(By.XPath(LegTwoOriginCityCodeID));
             ELeg2CityCode.SendKeys(LegTwoOriginCityCode);
-            ELeg2CityCode.SendKeys(Keys.Tab);
+            ELeg2CityCode.SendKeys(Keys.Enter);
 
-            Thread.Sleep(SleepTimer);
+            Thread.Sleep(SleepTimer * 5);
 
-            IWebElement ELeg2DepCode = driver.FindElement(By.Id(LegTwoDestinationCityCodeID));
+            js.ExecuteScript(ClearCitySuggestion);
+
+            Thread.Sleep(SleepTimer * 5);
+
+            IWebElement ELeg2DepCode = driver.FindElement(By.XPath(LegTwoDestinationCityCodeID));
             ELeg2DepCode.SendKeys(LegTwoDestinationCityCode);
-            ELeg2DepCode.SendKeys(Keys.Tab);
+            ELeg2DepCode.SendKeys(Keys.Enter);
+
+            Thread.Sleep(SleepTimer * 5);
+
+            js.ExecuteScript(ClearCitySuggestion);
+
+            Thread.Sleep(SleepTimer * 5);
 
             Thread.Sleep(SleepTimer);
 
-            IWebElement ELeg2DepartureDate = driver.FindElement(By.Id(LegTwoDepartureDateID));
+            IWebElement ELeg2DepartureDate = driver.FindElement(By.XPath(LegTwoDepartureDateID));
             ELeg2DepartureDate.SendKeys(LegTwoDepartureDate);
-            ELeg2DepartureDate.SendKeys(Keys.Tab);
-
-            Thread.Sleep(SleepTimer);
+            ELeg2DepartureDate.SendKeys(Keys.Enter);
 
             Console.WriteLine("Populated Second Leg");
 
-            IWebElement EDumpOriginCityCode = driver.FindElement(By.Id(DumpLegOriginCityCodeID));
+/*            IWebElement EDumpOriginCityCode = driver.FindElement(By.XPath(DumpLegOriginCityCodeID));
             EDumpOriginCityCode.SendKeys(DumpLegOriginCityCode);
             EDumpOriginCityCode.SendKeys(Keys.Tab);
 
             Thread.Sleep(SleepTimer);
 
-            IWebElement EDumpDepCode = driver.FindElement(By.Id(DumpLegDestinationCityCodeID));
+            IWebElement EDumpDepCode = driver.FindElement(By.XPath(DumpLegDestinationCityCodeID));
             EDumpDepCode.SendKeys(DumpLegDestinationCityCode);
             EDumpDepCode.SendKeys(Keys.Tab);
             
             Thread.Sleep(SleepTimer);
 
-            IWebElement EDumpDepartureDate = driver.FindElement(By.Id(DumpLegDepartureDateID));
+            IWebElement EDumpDepartureDate = driver.FindElement(By.XPath(DumpLegDepartureDateID));
             EDumpDepartureDate.SendKeys(DumpLegDepartureDate);
             EDumpDepartureDate.SendKeys(Keys.Tab);
 
             Thread.Sleep(SleepTimer);
 
-            Console.WriteLine("Populated Dump Leg");
+            Console.WriteLine("Populated Dump Leg");*/
 
             IWebElement EFinalSearchButton = driver.FindElement(By.XPath(SearchButtonXpath));
             EFinalSearchButton.Click();
