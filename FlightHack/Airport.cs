@@ -1,4 +1,5 @@
 ﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Device.Location;
 using System.IO;
@@ -71,12 +72,62 @@ namespace FlightHack
             return JsonConvert.DeserializeObject<List<Airport>>(jsonString);
         }
 
-        public double DistanceBetweenAirports(Airport A, Airport B)
+        public static double DistanceBetweenAirports(Airport A, Airport B)
         {
             var sCoord = new GeoCoordinate(double.Parse(A.Lat), double.Parse(A.Lon));
             var eCoord = new GeoCoordinate(double.Parse(B.Lat), double.Parse(B.Lon));
 
             return sCoord.GetDistanceTo(eCoord);
+        }
+
+        /// <summary>
+        /// Calculates an average distance between all airports in the list.
+        /// </summary>
+        /// <param name="Airports">Distance in km</param>
+        /// <returns></returns>
+        public static double AverageDistanceBetweenAllAirports(List<Airport> Airports)
+        {
+            double AverageDistance = 0.0;
+
+            for(int i = 0; i < Airports.Count; i++)
+            {
+                for(int j = (i+1); j < Airports.Count; j++)
+                {
+                    AverageDistance += DistanceBetweenAirports(Airports[i], Airports[j]);
+                }
+            }
+
+            int NumberOfConnections = Airports.Count*(Airports.Count - 1)/2;
+
+            // Divide by the no of connections to get avg, covert to km
+            AverageDistance /= NumberOfConnections;
+            AverageDistance /= 1000.0;
+
+            return AverageDistance;
+        }
+
+        public static List<Tuple<Airport, Airport>> PruneDumpConnections(List<Airport> Airports, double DistanceCutoff)
+        {
+            List<Tuple<Airport, Airport>> DumpConnections = new List<Tuple<Airport, Airport>>();
+
+            for (int i = 0; i < Airports.Count; i++)
+            {
+                for (int j = (i + 1); j < Airports.Count; j++)
+                {
+                    double DistanceBetweenPair = DistanceBetweenAirports(Airports[i], Airports[j]);
+
+                    if(DistanceBetweenPair < DistanceCutoff)
+                    {
+                        DumpConnections.Add(new Tuple<Airport, Airport>(Airports[i], Airports[j]));
+                    }
+                    else
+                    {
+                        // Skip this pair
+                    }
+                }
+            }
+
+            return DumpConnections;
         }
     }
 }
