@@ -77,7 +77,7 @@ namespace FlightHack
             var sCoord = new GeoCoordinate(double.Parse(A.Lat), double.Parse(A.Lon));
             var eCoord = new GeoCoordinate(double.Parse(B.Lat), double.Parse(B.Lon));
 
-            return sCoord.GetDistanceTo(eCoord);
+            return sCoord.GetDistanceTo(eCoord)/1000.0;
         }
 
         /// <summary>
@@ -106,7 +106,7 @@ namespace FlightHack
             return AverageDistance;
         }
 
-        public static List<Tuple<Airport, Airport>> PruneDumpConnections(List<Airport> Airports, double DistanceCutoff)
+        public static List<Tuple<Airport, Airport>> PruneDumpConnections(List<Airport> Airports, double MaxDistance, double MinDistance)
         {
             List<Tuple<Airport, Airport>> DumpConnections = new List<Tuple<Airport, Airport>>();
 
@@ -116,7 +116,7 @@ namespace FlightHack
                 {
                     double DistanceBetweenPair = DistanceBetweenAirports(Airports[i], Airports[j]);
 
-                    if(DistanceBetweenPair < DistanceCutoff)
+                    if(DistanceBetweenPair > MinDistance && DistanceBetweenPair < MaxDistance)
                     {
                         DumpConnections.Add(new Tuple<Airport, Airport>(Airports[i], Airports[j]));
                     }
