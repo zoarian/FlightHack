@@ -60,26 +60,32 @@ namespace FlightHack
 
             Console.WriteLine(EligableAirports + " Are Eligible Out Of: " + InitialNoOfAirports + " Based On Number Of Carriers Pruning");
 
-            // Now go through each pair and check the distance.
-            // Remove the airports that are too far from each other.
-            // You only need to do distance comparison once (though it shouldn't take too long anyway).
-            DumpConnections = Airport.PruneDumpConnections(Airports, 70, 60);
+            int MinDistance = 30;
+            int MaxDistance = 80;
+            int BinSize = 10;
 
-            Console.WriteLine("We have: " + DumpConnections.Count + " Dump Connections, based on distance pruning");
-
-            for(int i = 0; i < DumpConnections.Count; i++)
+            // TODO: Don't hack this - do proper splits... precalculate maybe? 
+            // Split the searches into bins of 10
+            for (int i = MinDistance; i < MaxDistance; i += BinSize)
             {
+                // Now go through each pair and check the distance.
+                // Remove the airports that are too far from each other.
+                // You only need to do distance comparison once (though it shouldn't take too long anyway).
+                DumpConnections = Airport.PruneDumpConnections(Airports, i+BinSize, i);
 
+                Console.WriteLine("We have: " + DumpConnections.Count + " Dump Connections, based on distance pruning");
+
+                foreach (Tuple<Airport, Airport> DumpLeg in DumpConnections)
+                {
+                    var LastTask = new Task(() => MatrixClient.IssueAQueryAsync(DumpLeg.Item1, DumpLeg.Item2, OriginalFare, Results));
+                    LastTask.Start();
+                    TaskList.Add(LastTask);
+                }
+
+                Task.WaitAll(TaskList.ToArray());
             }
 
-            // TODO: Run these asynchronously - see below for psudocode
-            foreach (Tuple<Airport, Airport> DumpLeg in DumpConnections)
-            {
-                var LastTask = new Task(() => MatrixClient.IssueAQueryAsync(DumpLeg.Item1, DumpLeg.Item2, OriginalFare, Results));
-                LastTask.Start();
-                TaskList.Add(LastTask);
-            }
-
+            Console.WriteLine("Completed Flight Searches - saving a file now");
 
             /*  
             for (int i = 0; i < DumpConnections.Count; i++)
@@ -87,8 +93,6 @@ namespace FlightHack
                 Results.Add(MatrixClient.IssueAQuery(DumpConnections, OriginalFare, DumpConnections[i].Item1.Code, DumpConnections[i].Item2.Code, i));
             }
             */
-
-            Task.WaitAll(TaskList.ToArray());
 
             ResultsFileFullPath += DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss") + ResultsFileBaseName;
 
