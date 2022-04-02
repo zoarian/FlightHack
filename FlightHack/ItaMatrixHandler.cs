@@ -98,10 +98,11 @@ namespace FlightHack
             Console.WriteLine("Doing Dump Leg " + QueryID + ". Connection: " + AirportCode1 + " -> " + DumpAirportCode2);
 
             ChromeOptions options = new ChromeOptions();
-            options.AddArgument("--log-level=3");
-            options.AddArgument("--silent");
-            //options.AddArguments("headless");
-            options.AddArgument("--disable-extensions");
+            options.AddArgument("log-level=3");
+            options.AddArgument("silent");
+            options.AddArgument("no-sandbox");
+            options.AddArgument("headless");
+            options.AddArgument("disable-extensions");
             options.AddArgument("test-type");
 
             ChromeDriverService service = ChromeDriverService.CreateDefaultService();
