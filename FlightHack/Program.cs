@@ -1,20 +1,48 @@
 ﻿using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Support.UI;
-using OpenQA.Selenium.Support;
 using System;
 using System.Threading;
+using System.Collections.Generic;
 
-namespace Scraper
+namespace FlightHack
 {
     class Program
     {
         static void Main(string[] args)
         {
+            int SleepTimer = 100;
+            int NoOfCarriersThreshhold = 10; 
             double OriginalFare = 408.60;
             double NewFare;
-            int SleepTimer = 100;
+            string AirortFileLocation = "airports.json";
             string URL = "https://matrix.itasoftware.com/search";
+            List<Airport> Ariports = Airport.ProcessFile(AirortFileLocation);
+            
+            // We need to prune our airport list so we don't spend years searching
+            // Start by removing small and unpopular ones first, since the likelihood
+            // Of them habing a flight is small anyway
+
+            int EligableAirports = 0;
+
+            for(int i = Ariports.Count-1; i > 0; i--)
+            {
+                if( Int32.Parse(Ariports[i].Carriers) > NoOfCarriersThreshhold)
+                {
+                    Console.WriteLine(i.ToString() + " " + Ariports[i].Code);
+                    EligableAirports++;
+                }
+                else
+                {
+                    Ariports.RemoveAt(i);
+                }
+            }
+
+            Console.WriteLine(EligableAirports + " Are Eligible Out Of: " + Ariports.Count);
+
+            // Now go through each pair and check the distance.
+            // Remove the airports that are too far from each other.
+            // You only need to do distance comparison once (though it shouldn't take too long anyway).
 
             string MultiCityTabID = "mat-tab-label-0-2";
             string AddFlightButtonXPath = "/html/body/app-root/matrix-search-page/mat-card[1]/mat-card-content/form/matrix-select-flight-tabs/mat-tab-group/div/mat-tab-body[3]/div/matrix-multi-city-search-tab/div/div[2]/mat-chip";
@@ -57,7 +85,6 @@ namespace Scraper
             string CurrencyID = "mat-input-6";
 
             string QueryResultXPath = "/html/body/app-root/matrix-flights-page/mat-card/mat-card-content/mat-tab-group/div/mat-tab-body[1]/div/div/matrix-result-set-panel/div/div/table/tbody/tr[1]/td[1]/div/button/span[1]";
-            string QueryValue;
 
             // Starting Search
             Console.WriteLine("Initiating the browser");
