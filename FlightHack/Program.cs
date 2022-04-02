@@ -236,6 +236,7 @@ namespace FlightHack
                 }
                 catch (Exception ex)
                 {
+                    Console.WriteLine("Error: " + ex.Message);
                     Console.WriteLine("We've exceeded the wait timer or there's no flights for this dump leg");
 
                     WebDriverWait w = new WebDriverWait(driver, TimeSpan.FromSeconds(60));
