@@ -63,6 +63,7 @@ namespace FlightHack
             {
                 Console.WriteLine("Doing Dump Leg " + i + ". Connection: " + DumpConnections[i].Item1.Code + " -> " + DumpConnections[i].Item2.Code);
 
+                // This can all be outside of the for loop
                 string MultiCityTabID = "mat-tab-label-0-2";
                 string AddFlightButtonXPath = "/html/body/app-root/matrix-search-page/mat-card[1]/mat-card-content/form/matrix-select-flight-tabs/mat-tab-group/div/mat-tab-body[3]/div/matrix-multi-city-search-tab/div/div[2]/mat-chip";
                 string SearchButtonXpath = "/html/body/app-root/matrix-search-page/mat-card[1]/mat-card-content/form/div[2]/button";
@@ -78,6 +79,8 @@ namespace FlightHack
                 string DumpLegOriginCityCodeID = "mat-chip-list-input-8";
                 string DumpLegDestinationCityCodeID = "mat-chip-list-input-9";
                 string DumpLegDepartureDateID = "mat-input-11";
+
+                string StrtNewSearchXPath = "/html/body/app-root/matrix-flights-page/mat-card/mat-card-content/mat-tab-group/div/mat-tab-body[1]/div/div/matrix-result-set-panel/div/matrix-no-flights-found/button";
 
                 // 1st Leg Human Details
                 string LegOneOriginCityCode = "GVA;";
@@ -215,19 +218,32 @@ namespace FlightHack
 
                 Console.WriteLine("Searching For Flights...");
 
-                WebDriverWait w = new WebDriverWait(driver, TimeSpan.FromSeconds(60));
-                w.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath(QueryResultXPath)));
+                try
+                {
+                    WebDriverWait w = new WebDriverWait(driver, TimeSpan.FromSeconds(60));
+                    w.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath(QueryResultXPath)));
 
-                IWebElement ENewPrice = driver.FindElement(By.XPath(QueryResultXPath));
+                    IWebElement ENewPrice = driver.FindElement(By.XPath(QueryResultXPath));
 
-                double.TryParse(ENewPrice.Text.Trim('£'), out NewFare);
+                    double.TryParse(ENewPrice.Text.Trim('£'), out NewFare);
 
-                Console.WriteLine("Price with dump leg: " + DumpLegOriginCityCode + "->" + DumpLegDestinationCityCode + " is: " + ENewPrice.Text);
+                    Console.WriteLine("Price with dump leg: " + DumpLegOriginCityCode + "->" + DumpLegDestinationCityCode + " is: " + ENewPrice.Text);
 
-                if (NewFare < OriginalFare)
-                    Console.WriteLine("We've got a cheaper fare: " + NewFare);
-                else
-                    Console.WriteLine("No Luck: " + NewFare);
+                    if (NewFare < OriginalFare)
+                        Console.WriteLine("We've got a cheaper fare: " + NewFare);
+                    else
+                        Console.WriteLine("No Luck: " + NewFare);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("We've exceeded the wait timer or there's no flights for this dump leg");
+
+                    WebDriverWait w = new WebDriverWait(driver, TimeSpan.FromSeconds(60));
+                    w.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath(StrtNewSearchXPath)));
+
+                    IWebElement ENewSearch = driver.FindElement(By.XPath(StrtNewSearchXPath));
+                    ENewSearch.Click();
+                }
             }
         }
     }
