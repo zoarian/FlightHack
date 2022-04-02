@@ -29,6 +29,7 @@ namespace FlightHack
             List<Tuple<Airport, Airport>> DumpConnections = new List<Tuple<Airport, Airport>>();
             List<QueryResult> Results = new List<QueryResult>();
             ItaMatrixHandler MatrixClient = new ItaMatrixHandler(SleepTimer, MaxSearchTimeLimit, URL);
+            List<Task> TaskList = new List<Task>();
 
             //Console.WriteLine("Calculating AVG Distance");
             //double AvgDistance = Airport.AverageDistanceBetweenAllAirports(Airports);
@@ -62,34 +63,32 @@ namespace FlightHack
             // Now go through each pair and check the distance.
             // Remove the airports that are too far from each other.
             // You only need to do distance comparison once (though it shouldn't take too long anyway).
-
-            //DumpConnections = Airport.PruneDumpConnections(Airports, AvgDistBtwAirports-6000, AvgDistBtwAirports-6005);
-
-            DumpConnections = Airport.PruneDumpConnections(Airports, 65, 60);
+            DumpConnections = Airport.PruneDumpConnections(Airports, 70, 60);
 
             Console.WriteLine("We have: " + DumpConnections.Count + " Dump Connections, based on distance pruning");
 
-            // TODO: Run these asynchronously - see below for psudocode
-            for (int i = 0; i < DumpConnections.Count; i++)
+            for(int i = 0; i < DumpConnections.Count; i++)
             {
 
-                //create and start tasks, then add them to the list
-                //tasks.Add(Task.Run(() => Results.Add(MatrixClient.IssueAQuery(DumpConnections, OriginalFare, DumpConnections[i].Item1.Code, DumpConnections[i].Item2.Code, i))));
-
-
-                Results.Add(MatrixClient.IssueAQuery(DumpConnections, OriginalFare, DumpConnections[i].Item1.Code, DumpConnections[i].Item2.Code, i));
             }
 
-            // TODO: Running queries asynchronously
-            /*            List<Task> TaskList = new List<Task>();
-                        foreach (...)
-                        {
-                            var LastTask = new Task(SomeFunction);
-                            LastTask.Start();
-                            TaskList.Add(LastTask);
-                        }
-                        Task.WaitAll(TaskList.ToArray());*/
+            // TODO: Run these asynchronously - see below for psudocode
+            foreach (Tuple<Airport, Airport> DumpLeg in DumpConnections)
+            {
+                var LastTask = new Task(() => MatrixClient.IssueAQueryAsync(DumpLeg.Item1, DumpLeg.Item2, OriginalFare, Results));
+                LastTask.Start();
+                TaskList.Add(LastTask);
+            }
 
+
+            /*  
+            for (int i = 0; i < DumpConnections.Count; i++)
+            {
+                Results.Add(MatrixClient.IssueAQuery(DumpConnections, OriginalFare, DumpConnections[i].Item1.Code, DumpConnections[i].Item2.Code, i));
+            }
+            */
+
+            Task.WaitAll(TaskList.ToArray());
 
             ResultsFileFullPath += DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss") + ResultsFileBaseName;
 
