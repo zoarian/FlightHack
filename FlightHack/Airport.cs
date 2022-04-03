@@ -159,6 +159,36 @@ namespace FlightHack
         /// <param name="MaxDistance">Maximum distance for the search</param>
         /// <param name="BinSize">Used for splitting the list into managable chunks, so we don't kill the chrome driver</param>
         /// <returns></returns>
+        public static List<Tuple<Airport, Airport>> GetAllDumpConnections(string AirportFileLocation, int MinNoOfCarriers, int MinDistance, int MaxDistance, int BinSize)
+        {
+            //List<Tuple<Airport, Airport>> DumpConnections = new List<Tuple<Airport, Airport>>();
+
+            List<Airport> Airports = ProcessFile(AirportFileLocation);
+
+            int InitialNoOfAirports = Airports.Count;
+
+            Console.WriteLine("#Airports From File: " + InitialNoOfAirports);
+
+            PruneAirportsBasedOnCarriers(Airports, MinNoOfCarriers);
+
+            Console.WriteLine("#Airports After Carrier Pruning: " + Airports.Count);
+
+            List<Tuple<Airport, Airport>> DumpConnections = PruneDumpConnections(Airports, MinDistance, MaxDistance);
+
+            Console.WriteLine("#Dump Leg Connections: " + DumpConnections.Count);
+
+            return DumpConnections;
+        }
+
+        /// <summary>
+        /// Returns a chunked list of dump connections
+        /// </summary>
+        /// <param name="AirportFileLocation">Location of the json file containing airport details</param>
+        /// <param name="MinNoOfCarriers">No of carriers used for restricting the search space - anything below this will be discarded</param>
+        /// <param name="MinDistance">Minimum distance for the search</param>
+        /// <param name="MaxDistance">Maximum distance for the search</param>
+        /// <param name="BinSize">Used for splitting the list into managable chunks, so we don't kill the chrome driver</param>
+        /// <returns></returns>
         public static List<List<Tuple<Airport, Airport>>> CompleteAirportPruning(string AirportFileLocation, int MinNoOfCarriers, int MinDistance, int MaxDistance, int BinSize)
         {
             //List<Tuple<Airport, Airport>> DumpConnections = new List<Tuple<Airport, Airport>>();

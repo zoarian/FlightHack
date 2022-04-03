@@ -14,10 +14,10 @@ namespace FlightHack
     public class ItaMatrixHandler
     {
         // Search Variables
-        double NewFare { get; set; }
-        int SleepTimer { get; set; } 
-        int MaxSearchTimeLimit { get; set; }
-        string URL { get; set; }
+        public double OriginalFare { get; set; }
+        public int SleepTimer { get; set; } 
+        public int MaxSearchTimeLimit { get; set; }
+        public string URL { get; set; }
 
         // Inital Search Form IDs and XPaths
         const string MultiCityTabID = "mat-tab-label-0-2";
@@ -45,32 +45,31 @@ namespace FlightHack
 
         const string CurrencyID = "mat-input-6";
 
-        
-
         // Result Page IDs and Xpaths
         const string QueryResultXPath = "/html/body/app-root/matrix-flights-page/mat-card/mat-card-content/mat-tab-group/div/mat-tab-body[1]/div/div/matrix-result-set-panel/div/div/table/tbody/tr[1]/td[1]/div/button/span[1]";
         const string StrtNewSearchXPath = "/html/body/app-root/matrix-flights-page/mat-card/mat-card-content/mat-tab-group/div/mat-tab-body[1]/div/div/matrix-result-set-panel/div/matrix-no-flights-found/button";
         const string NoResults = "/html/body/app-root/matrix-flights-page/mat-card/mat-card-content/mat-tab-group/div/mat-tab-body[1]/div/div/matrix-result-set-panel/div/matrix-no-flights-found/div[1]";
 
         // Input data - this will change depending on the query and the fuel dump flights
-        string AirlineInput { get ; set; }
-        string Currency { get; set; }
+        public string AirlineInput { get ; set; }
+        public string Currency { get; set; }
 
         // 1st Leg Human Details
-        string LegOneOriginCityCode { get; set; }
-        string LegOneDestinationCityCode { get; set; }
-        string LegOneDepartureDate { get; set; }
+        public string LegOneOriginCityCode { get; set; }
+        public string LegOneDestinationCityCode { get; set; }
+        public string LegOneDepartureDate { get; set; }
 
         // 2nd Leg Human Details
-        string LegTwoOriginCityCode { get; set; }
-        string LegTwoDestinationCityCode { get; set; }
-        string LegTwoDepartureDate { get; set; }
+        public string LegTwoOriginCityCode { get; set; }
+        public string LegTwoDestinationCityCode { get; set; }
+        public string LegTwoDepartureDate { get; set; }
 
-        public ItaMatrixHandler(int SleepTimer, int MaxSearchTimeLimit, string URL)
+        public ItaMatrixHandler(int SleepTimer, int MaxSearchTimeLimit, string URL, double OriginalFare)
         {
             this.SleepTimer = SleepTimer;
             this.MaxSearchTimeLimit = MaxSearchTimeLimit;
             this.URL = URL;
+            this.OriginalFare = OriginalFare;
 
             AirlineInput = "AIRLINES AT";
             Currency = "British Pound (GBP)";
@@ -287,7 +286,6 @@ namespace FlightHack
                 // Dump Leg Human Details
                 string DumpLegOriginCityCode = Airport1.Code;
                 string DumpLegDestinationCityCode = Airport2.Code;
-                string DumpLegFlex = "+/- 2 days";
 
                 Console.WriteLine("Completed Distance Calculations & Dump Leg Data Gathering");
 
@@ -310,7 +308,7 @@ namespace FlightHack
 
                 Thread.Sleep(SleepTimer * 10);
 
-                IWebDriver driver = new ChromeDriver(options);
+                IWebDriver driver = new ChromeDriver(service, options);
                 driver.Url = URL;
 
                 Thread.Sleep(SleepTimer * 20);
@@ -431,6 +429,8 @@ namespace FlightHack
                 {
                     WebDriverWait w = new WebDriverWait(driver, TimeSpan.FromSeconds(MaxSearchTimeLimit + 20));
                     w.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath(NoResults)));
+
+                    Console.WriteLine("No flights match the criteria");
                 }
                 catch (Exception ex)
                 {

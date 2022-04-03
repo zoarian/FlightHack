@@ -6,7 +6,9 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="CSharpDiscordWebhook" Version="2.2.0" />
     <PackageReference Include="CsvHelper" Version="27.2.1" />
+    <PackageReference Include="Discord.Net.Webhook" Version="3.4.1" />
     <PackageReference Include="DotNetSeleniumExtras.WaitHelpers" Version="3.11.0" />
     <PackageReference Include="IKVM" Version="8.1.5717" />
     <PackageReference Include="Newtonsoft.Json" Version="13.0.1" />

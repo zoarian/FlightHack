@@ -29,7 +29,7 @@ namespace FlightHack
             this.TimeStamp = TimeStamp;
         }
 
-        public static void SaveResultsToFile(string FilePath, List<QueryResult> Results)
+        public static string SaveResultsToFile(string FilePath, List<QueryResult> Results)
         {
             string ResultsFileBaseName = "_Results.csv";
             string ResultsFileFullPath = @"C:\Users\MP\Documents\FlightHack\" + DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss") + ResultsFileBaseName;
@@ -49,6 +49,9 @@ namespace FlightHack
             csvWriter.WriteRecords(Results);
 
             writer.Flush();
+            writer.Close();
+
+            return ResultsFileFullPath;
         }
     }
 }

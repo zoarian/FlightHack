@@ -3,13 +3,16 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
-
 namespace FlightHack
 {
     class Program
     {
         static async Task Main(string[] args)
         {
+            // Discord Client
+            string WebhookURL = "https://discord.com/api/webhooks/959509111035289640/z3S1WJ7LVnI7TFgQGZdCrLHziUwPNkuUglxhmxRKegiP4XiCbd7WdeMMUiOzfmN0Kp_f";
+            DiscordClient Disc = new DiscordClient(WebhookURL); 
+
             // ITA Matrix Client
             string URL = "https://matrix.itasoftware.com/search";
             int SleepTimer = 10;
@@ -18,21 +21,75 @@ namespace FlightHack
             // Airport & Pruning Details
             string AirortFileLocation = "airports.json";
             int MinNoOfCarriers = 10;
-            int MinDistance = 40;
-            int MaxDistance = 60;
-            int BinSize = 5;
+            int MinDistance = 200;
+            int MaxDistance = 240;
+            int BinSize = 6;
 
-            double AvgDistBtwAirports = 8406.2;
+            // Search Parameters
             double OriginalFare = 408.60;
             string DumpLegDepartureDate = "11/12/2022";
+            string ResultsFile;
 
-            ItaMatrixHandler MatrixClient = new ItaMatrixHandler(SleepTimer, MaxSearchTimeLimit, URL);
+            // Used for searches
             List<QueryResult> Results = new List<QueryResult>();
             List<Task> TaskList = new List<Task>();
-
             List<List<Tuple<Airport, Airport>>> ChunkedDumLegs = Airport.CompleteAirportPruning(AirortFileLocation, MinNoOfCarriers, MinDistance, MaxDistance, BinSize);
+            ItaMatrixHandler MatrixClient = new ItaMatrixHandler(SleepTimer, MaxSearchTimeLimit, URL, OriginalFare);
+            List<Tuple<Airport, Airport>> AllDumpLegs = Airport.GetAllDumpConnections(AirortFileLocation, MinNoOfCarriers, MinDistance, MaxDistance, BinSize);
 
-            for (int i = 0; i < ChunkedDumLegs.Count; i++)
+            /*            List<Tuple<Airport, Airport>> AllDumpLegs = Airport.GetAllDumpConnections(AirortFileLocation, MinNoOfCarriers, MinDistance, MaxDistance, BinSize);
+                        Parallel.ForEach(AllDumpLegs, new ParallelOptions { MaxDegreeOfParallelism = BinSize },
+                        DumpLeg =>
+                        {
+                            // logic
+                            var LastTask = new Task(() => MatrixClient.IssueAQueryAsync(DumpLeg.Item1, DumpLeg.Item2, DumpLegDepartureDate, OriginalFare, Results));
+                            LastTask.Start();
+                        });*/
+
+            var allTasks = new List<Task>();
+            var throttler = new SemaphoreSlim(initialCount: BinSize);
+
+            foreach (var DumpLeg in AllDumpLegs)
+            {
+                // do an async wait until we can schedule again
+                await throttler.WaitAsync();
+
+                // using Task.Run(...) to run the lambda in its own parallel
+                // flow on the threadpool
+                allTasks.Add(
+                    Task.Run(async () =>
+                    {
+                        try
+                        {
+                            MatrixClient.IssueAQueryAsync(DumpLeg.Item1, DumpLeg.Item2, DumpLegDepartureDate, OriginalFare, Results);
+                        }
+                        finally
+                        {
+                            throttler.Release();
+                        }
+                    }));
+            }
+
+            // won't get here until all urls have been put into tasks
+/*            await Task.WhenAll(allTasks);
+
+            using (SemaphoreSlim concurrencySemaphore = new SemaphoreSlim(BinSize))
+            {
+                List<Task> tasks = new List<Task>();
+                foreach (var DumpLeg in AllDumpLegs)
+                {
+                    concurrencySemaphore.Wait();
+
+                    var t = Task.Factory.StartNew(() => MatrixClient.IssueAQueryAsync(DumpLeg.Item1, DumpLeg.Item2, DumpLegDepartureDate, OriginalFare, Results));
+
+                    tasks.Add(t);
+                }
+
+                Task.WaitAll(tasks.ToArray());
+            }*/
+
+            // Change this so that when we finigh the no results search, we add in another task to the list
+/*            for (int i = 0; i < ChunkedDumLegs.Count; i++)
             {
                 Console.WriteLine("Going Through Chunk: " + i);
 
@@ -46,63 +103,16 @@ namespace FlightHack
                 Task.WaitAll(TaskList.ToArray());
 
                 Thread.Sleep(SleepTimer);
-            }
-
-            //Console.WriteLine("Calculating AVG Distance");
-            //double AvgDistance = Airport.AverageDistanceBetweenAllAirports(Airports);
-            //Console.WriteLine("Average Distance Between Airports Is: " + AvgDistance);
-
-            /*            InitialNoOfAirports = Airports.Count;
-
-                        Console.WriteLine("Initial No Of Airports: " + InitialNoOfAirports);*/
-
-            // We need to prune our airport list so we don't spend years searching
-            // Start by removing small and unpopular ones first, since the likelihood
-            // Of them habing a flight is small anyway
-
-            /*            int EligableAirports = 0;
-
-                        for (int i = Airports.Count - 1; i > 0; i--)
-                        {
-                            if (Int32.Parse(Airports[i].Carriers) > NoOfCarriersThreshhold)
-                            {
-                                //Console.WriteLine(i.ToString() + " " + Airports[i].Code);
-                                EligableAirports++;
-                            }
-                            else
-                            {
-                                Airports.RemoveAt(i);
-                            }
-                        }
-
-                        Console.WriteLine(EligableAirports + " Are Eligible Out Of: " + InitialNoOfAirports + " Based On Number Of Carriers Pruning");
-            */
-            // TODO: Don't hack this - do proper splits... precalculate maybe? 
-            // Split the searches into bins of 10
-/*            for (int i = MinDistance; i < MaxDistance; i += BinSize)
-            {
-                // Now go through each pair and check the distance.
-                // Remove the airports that are too far from each other.
-                // You only need to do distance comparison once (though it shouldn't take too long anyway).
-                DumpConnections = Airport.PruneDumpConnections(Airports, i, i + BinSize);
-
-                Console.WriteLine("We have: " + DumpConnections.Count + " Dump Connections, based on distance pruning");
-
-                foreach (Tuple<Airport, Airport> DumpLeg in DumpConnections)
-                {
-                    var LastTask = new Task(() => MatrixClient.IssueAQueryAsync(DumpLeg.Item1, DumpLeg.Item2, DumpLegDepartureDate, OriginalFare, Results));
-                    LastTask.Start();
-                    TaskList.Add(LastTask);
-                }
-
-                Task.WaitAll(TaskList.ToArray());
-
-                Thread.Sleep(SleepTimer);
             }*/
 
             Console.WriteLine("Completed Flight Searches - saving a file now");
 
-            QueryResult.SaveResultsToFile("", Results);
+            // Save results in a file
+            ResultsFile = QueryResult.SaveResultsToFile("", Results);
+
+            // Send file to discord
+            Disc.SendResults(ResultsFile, MatrixClient, BinSize, MinDistance, MaxDistance, MinNoOfCarriers);
+
         }
     }
 }
