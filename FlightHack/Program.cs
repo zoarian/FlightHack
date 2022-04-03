@@ -18,25 +18,27 @@ namespace FlightHack
             string URL = "https://matrix.itasoftware.com/search";
             string DumpLegRoutingCode = "N";
             int SleepTimer = 10;
-            int SearchLimitNoResults = 20;
-            int SearchLimitWithResults = 60;
+            int SearchLimitNoResults = 70;
+            int SearchLimitWithResults = 30;
 
             // Airport & Pruning Details
             string AirortFileLocation = "airports.json";
-            int MinNoOfCarriers = 10;
-            int MinDistance = 599;
+            int MinNoOfCarriers = 20;
+            int MinDistance = 1;
             int MaxDistance = 600;
-            int BinSize = 1;
+            int BinSize = 8;
 
             // Search Parameters
-            double OriginalFare = 408.60;
-            string DumpLegDepartureDate = "11/12/2022";
+            double OriginalFare = 252;
+            string FirstLegRouting = "F:WS51 F:WS273";
+            string SecondLegRouting = "F:WS16";
+            string DumpLegDepartureDate = "08/26/2022";
             string ResultsFile;
 
             // Used for searches
             List<QueryResult> Results = new List<QueryResult>();
             List<Task> allTasks = new List<Task>();
-            ItaMatrixHandler MatrixClient = new ItaMatrixHandler(SleepTimer, SearchLimitNoResults, SearchLimitWithResults, URL, OriginalFare, DumpLegRoutingCode);
+            ItaMatrixHandler MatrixClient = new ItaMatrixHandler(SleepTimer, SearchLimitNoResults, SearchLimitWithResults, URL, OriginalFare, DumpLegRoutingCode, FirstLegRouting, SecondLegRouting);
             List<Tuple<Airport, Airport>> AllDumpLegs = Airport.GetAllDumpConnections(AirortFileLocation, MinNoOfCarriers, MinDistance, MaxDistance, BinSize);
 
             var throttler = new SemaphoreSlim(initialCount: BinSize);

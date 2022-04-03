@@ -29,10 +29,12 @@ namespace FlightHack
         const string LegOneOriginCityCodeID = "mat-chip-list-input-4";
         const string LegOneDestinationCityCodeID = "mat-chip-list-input-5";
         const string LegOneDepartureDateID = "mat-input-8";
+        const string LegOneRoutingCodeID = "/html/body/app-root/matrix-search-page/mat-card[1]/mat-card-content/form/matrix-select-flight-tabs/mat-tab-group/div/mat-tab-body[3]/div/matrix-multi-city-search-tab/div/div[1]/matrix-flight-picker/div/div/div[2]/div[1]/div/mat-form-field[1]/div/div[1]/div[1]/input";
 
         const string LegTwoOriginCityCodeID = "mat-chip-list-input-6";
         const string LegTwoDestinationCityCodeID = "mat-chip-list-input-7";
         const string LegTwoDepartureDateID = "mat-input-10";
+        const string LegTwoRoutingCodeID = "/html/body/app-root/matrix-search-page/mat-card[1]/mat-card-content/form/matrix-select-flight-tabs/mat-tab-group/div/mat-tab-body[3]/div/matrix-multi-city-search-tab/div/div[3]/matrix-flight-picker/div/div/div[2]/div[1]/div/mat-form-field[1]/div/div[1]/div[1]/input";
 
         const string DumpLegOriginCityCodeID = "mat-chip-list-input-8";
         const string DumpLegDestinationCityCodeID = "mat-chip-list-input-9";
@@ -67,9 +69,12 @@ namespace FlightHack
         public string LegTwoDestinationCityCode { get; set; }
         public string LegTwoDepartureDate { get; set; }
 
+        public string LegOneRoutingCode { get; set; }
+        public string LegTwoRoutingCode { get; set; }
         public string DumpLegRouting { get; set; }
 
-        public ItaMatrixHandler(int SleepTimer, int MaxSearchTimeLimit, int SearchLimitWithResults, string URL, double OriginalFare, string DumpLegRouting)
+
+        public ItaMatrixHandler(int SleepTimer, int MaxSearchTimeLimit, int SearchLimitWithResults, string URL, double OriginalFare, string DumpLegRouting, string LegOneRoutingCode, string LegTwoRoutingCode)
         {
             this.SleepTimer = SleepTimer;
             this.SearchLimitNoResults = MaxSearchTimeLimit;
@@ -77,18 +82,20 @@ namespace FlightHack
             this.URL = URL;
             this.OriginalFare = OriginalFare;
             this.DumpLegRouting = DumpLegRouting;
+            this.LegOneRoutingCode = LegOneRoutingCode;
+            this.LegTwoRoutingCode = LegTwoRoutingCode; 
 
             AirlineInput = "AIRLINES AT";
             Currency = "British Pound (GBP)";
 
-            LegOneOriginCityCode = "GVA;";
-            LegOneDestinationCityCode = "JFK;";
-            LegOneDepartureDate = "10/30/2022";
+            LegOneOriginCityCode = "DUB;";
+            LegOneDestinationCityCode = "YYZ;";
+            LegOneDepartureDate = "05/16/2022";
 
             // This is not necessarily true
             LegTwoOriginCityCode = LegOneDestinationCityCode;
-            LegTwoDestinationCityCode = LegOneOriginCityCode;
-            LegTwoDepartureDate = "11/06/2022";
+            LegTwoDestinationCityCode = "EDI";
+            LegTwoDepartureDate = "06/14/2022";
         }
 
         public void IssueAQueryAsync(Airport Airport1, Airport Airport2, string DumpLegDepartureDate, double OriginalFare, List<QueryResult> Results)
@@ -113,7 +120,7 @@ namespace FlightHack
                                 options.AddArgument("no-sandbox");
                                 options.AddArgument("ignore-certificate-errors");
                                 options.AddArgument("ignore-ssl-errors");
-                                //options.AddArgument("headless");
+                                options.AddArgument("headless");
                                 options.AddArgument("disable-extensions");
                                 options.AddArgument("test-type");
                                 options.AddArgument("excludeSwitches");
@@ -191,16 +198,32 @@ namespace FlightHack
                 IWebElement EAdvancedSearchButton = driver.FindElement(By.XPath(AdvancedButtonID));
                 EAdvancedSearchButton.Click();
 
-                w = new WebDriverWait(driver, TimeSpan.FromMilliseconds(LoadingTimeout));
-                w.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.Id(AirlineInputID1)));
+                if(false)
+                {
+                    w = new WebDriverWait(driver, TimeSpan.FromMilliseconds(LoadingTimeout));
+                    w.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.Id(AirlineInputID1)));
 
-                IWebElement EAirlingInput1 = driver.FindElement(By.Id(AirlineInputID1));
-                EAirlingInput1.SendKeys(AirlineInput);
-                EAirlingInput1.SendKeys(Keys.Tab);
+                    IWebElement EAirlingInput1 = driver.FindElement(By.Id(AirlineInputID1));
+                    EAirlingInput1.SendKeys(AirlineInput);
+                    EAirlingInput1.SendKeys(Keys.Tab);
 
-                IWebElement EAirlingInput2 = driver.FindElement(By.Id(AirlineInputID2));
-                EAirlingInput2.SendKeys(AirlineInput);
-                EAirlingInput2.SendKeys(Keys.Tab);
+                    IWebElement EAirlingInput2 = driver.FindElement(By.Id(AirlineInputID2));
+                    EAirlingInput2.SendKeys(AirlineInput);
+                    EAirlingInput2.SendKeys(Keys.Tab);
+                }
+                else
+                {
+                    w = new WebDriverWait(driver, TimeSpan.FromMilliseconds(LoadingTimeout));
+                    w.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath(LegOneRoutingCodeID)));
+
+                    IWebElement ELegOneRoutineCode = driver.FindElement(By.XPath(LegOneRoutingCodeID));
+                    ELegOneRoutineCode.SendKeys(LegOneRoutingCode);
+                    ELegOneRoutineCode.SendKeys(Keys.Tab);
+
+                    IWebElement ELegTwoRoutineCode = driver.FindElement(By.XPath(LegTwoRoutingCodeID));
+                    ELegTwoRoutineCode.SendKeys(LegTwoRoutingCode);
+                    ELegTwoRoutineCode.SendKeys(Keys.Tab);
+                }
 
                 IWebElement EDumpRoutingID = driver.FindElement(By.Id(DumpLegRoutingID));
                 EDumpRoutingID.SendKeys(DumpLegRouting);
