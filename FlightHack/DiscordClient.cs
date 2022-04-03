@@ -30,13 +30,14 @@ namespace FlightHack
 
             string SearchTitle = "Search Parameters" + "\n";
             string Carriers = "Airports Minimum No Of Carriers: " + MinNoOfCarriers + "\n";
-            string SearchParam = "SleepTimer: " + Matrix.SleepTimer + "ms" + " Search Timeout: " + Matrix.MaxSearchTimeLimit + " (+/-20) seconds. \n";
+            string SearchParam = "SleepTimer: " + Matrix.SleepTimer + "ms" + " No Results Timeout: " + Matrix.SearchLimitNoResults + " Results Timeout: " + Matrix.SearchLimitWithResults + " \n";
             string Distance = "Distance Between Dump Ariports. Min: " + MinDist + " Max: " + MaxDist + " Bin size: " + bin + "\n";
+            string DumpParam = "Dump Leg Routing Codes: " + Matrix.DumpLegRouting + "\n";
             string ResultParam = "Flights Scanned: " + FlightsScanned + " Total Time Taken: " + TotalTime + "\n ";
 
             Discord.DiscordEmbed embed = new Discord.DiscordEmbed();
             embed.Title = "Fuel Dump Scrapper";
-            embed.Description = FirstLeg + SecondLeg + Price + SearchTitle + Carriers + SearchParam + Distance + ResultParam;
+            embed.Description = FirstLeg + SecondLeg + Price + SearchTitle + Carriers + SearchParam + Distance + DumpParam + ResultParam;
             embed.Url = "https://matrix.itasoftware.com";
             embed.Timestamp = DateTime.Now;
             embed.Color = Color.Red;

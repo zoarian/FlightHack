@@ -16,15 +16,17 @@ namespace FlightHack
 
             // ITA Matrix Client
             string URL = "https://matrix.itasoftware.com/search";
+            string DumpLegRoutingCode = "N";
             int SleepTimer = 10;
-            int MaxSearchTimeLimit = 40;
+            int SearchLimitNoResults = 20;
+            int SearchLimitWithResults = 60;
 
             // Airport & Pruning Details
             string AirortFileLocation = "airports.json";
-            int MinNoOfCarriers = 10;
-            int MinDistance = 240;
-            int MaxDistance = 260;
-            int BinSize = 7;
+            int MinNoOfCarriers = 1;
+            int MinDistance = 0;
+            int MaxDistance = 300;
+            int BinSize = 10;
 
             // Search Parameters
             double OriginalFare = 408.60;
@@ -34,7 +36,7 @@ namespace FlightHack
             // Used for searches
             List<QueryResult> Results = new List<QueryResult>();
             List<Task> allTasks = new List<Task>();
-            ItaMatrixHandler MatrixClient = new ItaMatrixHandler(SleepTimer, MaxSearchTimeLimit, URL, OriginalFare);
+            ItaMatrixHandler MatrixClient = new ItaMatrixHandler(SleepTimer, SearchLimitNoResults, SearchLimitWithResults, URL, OriginalFare, DumpLegRoutingCode);
             List<Tuple<Airport, Airport>> AllDumpLegs = Airport.GetAllDumpConnections(AirortFileLocation, MinNoOfCarriers, MinDistance, MaxDistance, BinSize);
 
             var throttler = new SemaphoreSlim(initialCount: BinSize);
@@ -46,8 +48,7 @@ namespace FlightHack
                 // do an async wait until we can schedule again
                 await throttler.WaitAsync();
 
-                // using Task.Run(...) to run the lambda in its own parallel
-                // flow on the threadpool
+                // using Task.Run(...) to run the lambda in its own parallel flow on the threadpool
                 allTasks.Add(
                     Task.Run(async () =>
                     {
