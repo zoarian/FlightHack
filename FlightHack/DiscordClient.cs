@@ -19,7 +19,7 @@ namespace FlightHack
             hook.Url = Url;
         }
 
-        public void SendResults(string FilePath, ItaMatrixHandler Matrix, int bin, int MinDist, int MaxDist, int MinNoOfCarriers)
+        public void SendResults(string FilePath, ItaMatrixHandler Matrix, int bin, int MinDist, int MaxDist, int MinNoOfCarriers, int FlightsScanned, string TotalTime)
         {
             Discord.DiscordMessage message = new Discord.DiscordMessage();
             message.AvatarUrl = "https://w7.pngwing.com/pngs/205/97/png-transparent-airplane-icon-a5-takeoff-computer-icons-flight-airplane.png";
@@ -31,11 +31,12 @@ namespace FlightHack
             string SearchTitle = "Search Parameters" + "\n";
             string Carriers = "Airports Minimum No Of Carriers: " + MinNoOfCarriers + "\n";
             string SearchParam = "SleepTimer: " + Matrix.SleepTimer + "ms" + " Search Timeout: " + Matrix.MaxSearchTimeLimit + " (+/-20) seconds. \n";
-            string Distance = "Distance Between Dump Ariports. Min: " + MinDist + " Max: " + MaxDist + " Bin size: " + bin + "\n ";
+            string Distance = "Distance Between Dump Ariports. Min: " + MinDist + " Max: " + MaxDist + " Bin size: " + bin + "\n";
+            string ResultParam = "Flights Scanned: " + FlightsScanned + " Total Time Taken: " + TotalTime + "\n ";
 
             Discord.DiscordEmbed embed = new Discord.DiscordEmbed();
             embed.Title = "Fuel Dump Scrapper";
-            embed.Description = FirstLeg + SecondLeg + Price + SearchTitle + Carriers + SearchParam + Distance;
+            embed.Description = FirstLeg + SecondLeg + Price + SearchTitle + Carriers + SearchParam + Distance + ResultParam;
             embed.Url = "https://matrix.itasoftware.com";
             embed.Timestamp = DateTime.Now;
             embed.Color = Color.Red;

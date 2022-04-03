@@ -263,7 +263,7 @@ namespace FlightHack
 
             driver.Quit();
 
-            QueryResult Temp = new QueryResult(QueryTime, NewFare, DistanceBetweenDumpAirports, DumpLegOriginCityCode, DumpLegDestinationCityCode, DumpLegDepartureDate, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+            QueryResult Temp = new QueryResult(QueryTime, NewFare, DistanceBetweenDumpAirports, DumpLegOriginCityCode, DumpLegDestinationCityCode, DumpLegDepartureDate, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), "boo", 10);
 
             return Temp;
         }
@@ -271,48 +271,44 @@ namespace FlightHack
 
         public void IssueAQueryAsync(Airport Airport1, Airport Airport2, string DumpLegDepartureDate, double OriginalFare, List<QueryResult> Results)
         {
+            string QueryMessage;
+            string QueryTime;
+            double DistanceBetweenDumpAirports = Airport.DistanceBetweenAirports(Airport1, Airport2);
+            double NewFare = 0;
+            string DumpLegOriginCityCode = Airport1.Code;
+            string DumpLegDestinationCityCode = Airport2.Code;
+
+            var QueryTimer = Stopwatch.StartNew();
+            int LoadingTimeout = SleepTimer * 20;
+
             try
             {
                 Console.WriteLine("Doing Dump Leg Connection: " + Airport1.Code + " -> " + Airport2.Code);
 
-                var watch = Stopwatch.StartNew();
-
-                string QueryTime;
-                double DistanceBetweenDumpAirports = 0;
-                double NewFare = 0;
-
-                DistanceBetweenDumpAirports = Airport.DistanceBetweenAirports(Airport1, Airport2);
-
-                // Dump Leg Human Details
-                string DumpLegOriginCityCode = Airport1.Code;
-                string DumpLegDestinationCityCode = Airport2.Code;
-
-                Console.WriteLine("Completed Distance Calculations & Dump Leg Data Gathering");
-
-                ChromeOptions options = new ChromeOptions();
-                options.AddArgument("log-level=3");
-                options.AddArgument("silent");
-                options.AddArgument("no-sandbox");
-                options.AddArgument("ignore-certificate-errors");
-                options.AddArgument("ignore-ssl-errors");
-                options.AddArgument("headless");
-                options.AddArgument("disable-extensions");
-                options.AddArgument("test-type");
-                options.AddArgument("excludeSwitches");
+                ChromeOptions   options = new ChromeOptions();
+                                options.AddArgument("log-level=3");
+                                options.AddArgument("silent");
+                                options.AddArgument("no-sandbox");
+                                options.AddArgument("ignore-certificate-errors");
+                                options.AddArgument("ignore-ssl-errors");
+                                options.AddArgument("headless");
+                                options.AddArgument("disable-extensions");
+                                options.AddArgument("test-type");
+                                options.AddArgument("excludeSwitches");
 
                 ChromeDriverService service = ChromeDriverService.CreateDefaultService();
-                service.SuppressInitialDiagnosticInformation = true;
-                service.HideCommandPromptWindow = true;
+                                    service.SuppressInitialDiagnosticInformation = true;
+                                    service.HideCommandPromptWindow = true;
 
                 Console.WriteLine("Started Chrome Driver");
 
                 Thread.Sleep(SleepTimer * 10);
 
-                IWebDriver driver = new ChromeDriver(service, options);
-                driver.Url = URL;
+                IWebDriver  driver = new ChromeDriver(service, options);
+                            driver.Url = URL;
 
-                Thread.Sleep(SleepTimer * 20);
-
+                WebDriverWait w = new WebDriverWait(driver, TimeSpan.FromMilliseconds(LoadingTimeout));
+                              w.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.Id(MultiCityTabID)));
                 IWebElement EMultiButton = driver.FindElement(By.Id(MultiCityTabID));
                 EMultiButton.Click();
 
@@ -321,7 +317,7 @@ namespace FlightHack
                 IWebElement EAddFlights = driver.FindElement(By.XPath(AddFlightButtonXPath));
                 EAddFlights.Click();
 
-                Thread.Sleep(SleepTimer * 10);
+                Thread.Sleep(SleepTimer);
 
                 EAddFlights.Click();
 
@@ -427,10 +423,11 @@ namespace FlightHack
                 // TODO: Change this so we check if either NoResults or QueryResults are returned - asynch maybe?
                 try
                 {
-                    WebDriverWait w = new WebDriverWait(driver, TimeSpan.FromSeconds(MaxSearchTimeLimit + 20));
+                    w = new WebDriverWait(driver, TimeSpan.FromSeconds(MaxSearchTimeLimit + 30));
                     w.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath(NoResults)));
 
                     Console.WriteLine("No flights match the criteria");
+                    QueryMessage = "No flights match the criteria";
                 }
                 catch (Exception ex)
                 {
@@ -439,7 +436,7 @@ namespace FlightHack
                         Console.WriteLine("Error: " + ex.Message);
                         Console.WriteLine("We've not found a new search button - searching for prices now");
                         
-                        WebDriverWait w = new WebDriverWait(driver, TimeSpan.FromSeconds(MaxSearchTimeLimit-20));
+                        w = new WebDriverWait(driver, TimeSpan.FromSeconds(MaxSearchTimeLimit-35));
                         w.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath(QueryResultXPath)));
 
                         IWebElement ENewPrice = driver.FindElement(By.XPath(QueryResultXPath));
@@ -453,25 +450,32 @@ namespace FlightHack
                         else
                             Console.WriteLine("No Luck: " + NewFare);
 
+                        QueryMessage = "We've not found a new search button - searching for prices now";
+
                     }
                     catch (Exception e)
                     {
                         Console.WriteLine("Error: " + e.Message);
+                        QueryMessage = e.Message;
                     }
                 }
 
-                watch.Stop();
-                TimeSpan elapsed = watch.Elapsed;
-                QueryTime = elapsed.ToString(@"m\:ss");
-
                 driver.Quit();
 
-                Results.Add(new QueryResult(QueryTime, NewFare, DistanceBetweenDumpAirports, DumpLegOriginCityCode, DumpLegDestinationCityCode, DumpLegDepartureDate, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")));
-            }
+           }
             catch(Exception e)
             {
                 Console.WriteLine("Exception in Overall Query: " + e.Message);
+                QueryMessage = e.Message;
+                NewFare = -1;
             }
+
+            QueryTimer.Stop();
+            TimeSpan elapsed = QueryTimer.Elapsed;
+            QueryTime = elapsed.ToString(@"m\:ss");
+
+            Results.Add(new QueryResult(QueryTime, NewFare, DistanceBetweenDumpAirports, DumpLegOriginCityCode, DumpLegDestinationCityCode, DumpLegDepartureDate, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), QueryMessage, (Int32.Parse(Airport1.Carriers) + Int32.Parse(Airport2.Carriers))));
+
         }
     }
 }

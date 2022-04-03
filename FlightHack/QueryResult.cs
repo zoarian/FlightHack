@@ -14,11 +14,13 @@ namespace FlightHack
         public double DistanceBetweenDumpAirports { get; set; }
         public string DumpLegOriginCode { get; set; }
         public string DumpLegDestCode { get; set; }
+        public string SumOfCarriers { get; set; }
         public string DumpLegDepartureDate { get; set; }
         public string TimeStamp { get; set; }
+        public string QueryMessage { get; set; }
 
         public QueryResult() { }
-        public QueryResult(string QueryTime, double NewFare, double DistanceBetweenDumpAirports, string DumpLegOriginCode, string DumpLegDestCode, string DumpLegDepartureDate, string TimeStamp)
+        public QueryResult(string QueryTime, double NewFare, double DistanceBetweenDumpAirports, string DumpLegOriginCode, string DumpLegDestCode, string DumpLegDepartureDate, string TimeStamp, string QueryMessage, int SumOfCarriers)
         {
             this.QueryTime = QueryTime;
             this.NewFare = NewFare;
@@ -27,6 +29,8 @@ namespace FlightHack
             this.DumpLegDestCode = DumpLegDestCode;
             this.DumpLegDepartureDate = DumpLegDepartureDate;
             this.TimeStamp = TimeStamp;
+            this.QueryMessage = QueryMessage;
+            this.SumOfCarriers = SumOfCarriers.ToString();
         }
 
         public static string SaveResultsToFile(string FilePath, List<QueryResult> Results)

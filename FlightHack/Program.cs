@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -21,9 +22,9 @@ namespace FlightHack
             // Airport & Pruning Details
             string AirortFileLocation = "airports.json";
             int MinNoOfCarriers = 10;
-            int MinDistance = 200;
-            int MaxDistance = 240;
-            int BinSize = 6;
+            int MinDistance = 240;
+            int MaxDistance = 260;
+            int BinSize = 7;
 
             // Search Parameters
             double OriginalFare = 408.60;
@@ -32,22 +33,13 @@ namespace FlightHack
 
             // Used for searches
             List<QueryResult> Results = new List<QueryResult>();
-            List<Task> TaskList = new List<Task>();
-            List<List<Tuple<Airport, Airport>>> ChunkedDumLegs = Airport.CompleteAirportPruning(AirortFileLocation, MinNoOfCarriers, MinDistance, MaxDistance, BinSize);
+            List<Task> allTasks = new List<Task>();
             ItaMatrixHandler MatrixClient = new ItaMatrixHandler(SleepTimer, MaxSearchTimeLimit, URL, OriginalFare);
             List<Tuple<Airport, Airport>> AllDumpLegs = Airport.GetAllDumpConnections(AirortFileLocation, MinNoOfCarriers, MinDistance, MaxDistance, BinSize);
 
-            /*            List<Tuple<Airport, Airport>> AllDumpLegs = Airport.GetAllDumpConnections(AirortFileLocation, MinNoOfCarriers, MinDistance, MaxDistance, BinSize);
-                        Parallel.ForEach(AllDumpLegs, new ParallelOptions { MaxDegreeOfParallelism = BinSize },
-                        DumpLeg =>
-                        {
-                            // logic
-                            var LastTask = new Task(() => MatrixClient.IssueAQueryAsync(DumpLeg.Item1, DumpLeg.Item2, DumpLegDepartureDate, OriginalFare, Results));
-                            LastTask.Start();
-                        });*/
-
-            var allTasks = new List<Task>();
             var throttler = new SemaphoreSlim(initialCount: BinSize);
+
+            var watch = Stopwatch.StartNew();
 
             foreach (var DumpLeg in AllDumpLegs)
             {
@@ -70,40 +62,7 @@ namespace FlightHack
                     }));
             }
 
-            // won't get here until all urls have been put into tasks
-/*            await Task.WhenAll(allTasks);
-
-            using (SemaphoreSlim concurrencySemaphore = new SemaphoreSlim(BinSize))
-            {
-                List<Task> tasks = new List<Task>();
-                foreach (var DumpLeg in AllDumpLegs)
-                {
-                    concurrencySemaphore.Wait();
-
-                    var t = Task.Factory.StartNew(() => MatrixClient.IssueAQueryAsync(DumpLeg.Item1, DumpLeg.Item2, DumpLegDepartureDate, OriginalFare, Results));
-
-                    tasks.Add(t);
-                }
-
-                Task.WaitAll(tasks.ToArray());
-            }*/
-
-            // Change this so that when we finigh the no results search, we add in another task to the list
-/*            for (int i = 0; i < ChunkedDumLegs.Count; i++)
-            {
-                Console.WriteLine("Going Through Chunk: " + i);
-
-                foreach (Tuple<Airport, Airport> DumpLeg in ChunkedDumLegs[i])
-                {
-                    var LastTask = new Task(() => MatrixClient.IssueAQueryAsync(DumpLeg.Item1, DumpLeg.Item2, DumpLegDepartureDate, OriginalFare, Results));
-                    LastTask.Start();
-                    TaskList.Add(LastTask);
-                }
-
-                Task.WaitAll(TaskList.ToArray());
-
-                Thread.Sleep(SleepTimer);
-            }*/
+            watch.Stop();
 
             Console.WriteLine("Completed Flight Searches - saving a file now");
 
@@ -111,7 +70,7 @@ namespace FlightHack
             ResultsFile = QueryResult.SaveResultsToFile("", Results);
 
             // Send file to discord
-            Disc.SendResults(ResultsFile, MatrixClient, BinSize, MinDistance, MaxDistance, MinNoOfCarriers);
+            Disc.SendResults(ResultsFile, MatrixClient, BinSize, MinDistance, MaxDistance, MinNoOfCarriers, AllDumpLegs.Count, watch.Elapsed.ToString(@"m\:ss"));
 
         }
     }
