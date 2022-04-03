@@ -36,11 +36,16 @@ namespace FlightHack
         const string DumpLegDestinationCityCodeID = "mat-chip-list-input-9";
         const string DumpLegDepartureDateID = "mat-input-11";
 
+        const string DumpLegDateFlexIDButton = "mat-select-32";
+        const string PlusMinus2days = "/html/body/div[3]/div[2]/div/div/div/mat-option[5]/span";
+
         const string AdvancedButtonID = "/html/body/app-root/matrix-search-page/mat-card[1]/mat-card-content/form/matrix-select-flight-tabs/button";
         const string AirlineInputID1 = "mat-input-20";
         const string AirlineInputID2 = "mat-input-23";
 
         const string CurrencyID = "mat-input-6";
+
+        
 
         // Result Page IDs and Xpaths
         const string QueryResultXPath = "/html/body/app-root/matrix-flights-page/mat-card/mat-card-content/mat-tab-group/div/mat-tab-body[1]/div/div/matrix-result-set-panel/div/div/table/tbody/tr[1]/td[1]/div/button/span[1]";
@@ -265,7 +270,7 @@ namespace FlightHack
         }
 
 
-        public void IssueAQueryAsync(Airport Airport1, Airport Airport2, double OriginalFare, List<QueryResult> Results)
+        public void IssueAQueryAsync(Airport Airport1, Airport Airport2, string DumpLegDepartureDate, double OriginalFare, List<QueryResult> Results)
         {
             try
             {
@@ -282,7 +287,7 @@ namespace FlightHack
                 // Dump Leg Human Details
                 string DumpLegOriginCityCode = Airport1.Code;
                 string DumpLegDestinationCityCode = Airport2.Code;
-                string DumpLegDepartureDate = "11/08/2022";
+                string DumpLegFlex = "+/- 2 days";
 
                 Console.WriteLine("Completed Distance Calculations & Dump Leg Data Gathering");
 
@@ -399,6 +404,15 @@ namespace FlightHack
                 EAirlingInput2.SendKeys(AirlineInput);
                 EAirlingInput2.SendKeys(Keys.Tab);
 
+                // Add Dump Leg Flexibility
+                IWebElement EFlexIDButton = driver.FindElement(By.Id(DumpLegDateFlexIDButton));
+                EFlexIDButton.Click();
+
+                Thread.Sleep(SleepTimer);
+
+                IWebElement EDumpDateFlex = driver.FindElement(By.XPath(PlusMinus2days));
+                EDumpDateFlex.Click();
+
                 Thread.Sleep(SleepTimer);
 
                 IWebElement ECurrencyInput = driver.FindElement(By.Id(CurrencyID));
@@ -417,17 +431,15 @@ namespace FlightHack
                 {
                     WebDriverWait w = new WebDriverWait(driver, TimeSpan.FromSeconds(MaxSearchTimeLimit + 20));
                     w.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath(NoResults)));
-
-                    Console.WriteLine("Query didn't return any flights with this dump leg");
                 }
                 catch (Exception ex)
                 {
                     try
                     {
                         Console.WriteLine("Error: " + ex.Message);
-                        Console.WriteLine("New Search Button wasn't found, means we've got results");
-
-                        WebDriverWait w = new WebDriverWait(driver, TimeSpan.FromSeconds(MaxSearchTimeLimit - 20));
+                        Console.WriteLine("We've not found a new search button - searching for prices now");
+                        
+                        WebDriverWait w = new WebDriverWait(driver, TimeSpan.FromSeconds(MaxSearchTimeLimit-20));
                         w.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath(QueryResultXPath)));
 
                         IWebElement ENewPrice = driver.FindElement(By.XPath(QueryResultXPath));
@@ -440,6 +452,7 @@ namespace FlightHack
                             Console.WriteLine("We've got a cheaper fare: " + NewFare);
                         else
                             Console.WriteLine("No Luck: " + NewFare);
+
                     }
                     catch (Exception e)
                     {
@@ -454,10 +467,6 @@ namespace FlightHack
                 driver.Quit();
 
                 Results.Add(new QueryResult(QueryTime, NewFare, DistanceBetweenDumpAirports, DumpLegOriginCityCode, DumpLegDestinationCityCode, DumpLegDepartureDate, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")));
-
-                //QueryResult Temp = new QueryResult(QueryTime, NewFare, DistanceBetweenDumpAirports, DumpLegOriginCityCode, DumpLegDestinationCityCode, DumpLegDepartureDate, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
-
-                //return Temp;
             }
             catch(Exception e)
             {

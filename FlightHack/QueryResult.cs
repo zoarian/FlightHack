@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Globalization;
+using System.IO;
 using System.Text;
-using System.Threading.Tasks;
+using CsvHelper;
 
 namespace FlightHack
 {
@@ -26,6 +27,28 @@ namespace FlightHack
             this.DumpLegDestCode = DumpLegDestCode;
             this.DumpLegDepartureDate = DumpLegDepartureDate;
             this.TimeStamp = TimeStamp;
+        }
+
+        public static void SaveResultsToFile(string FilePath, List<QueryResult> Results)
+        {
+            string ResultsFileBaseName = "_Results.csv";
+            string ResultsFileFullPath = @"C:\Users\MP\Documents\FlightHack\" + DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss") + ResultsFileBaseName;
+
+            // Create the file, or overwrite if the file exists.
+            using (FileStream fs = File.Create(ResultsFileFullPath))
+            {
+                byte[] info = new UTF8Encoding(true).GetBytes("This is some text in the file.");
+                fs.Write(info, 0, info.Length);
+            }
+
+            StreamWriter writer = new StreamWriter(ResultsFileFullPath);
+            var csvWriter = new CsvWriter(writer, CultureInfo.CurrentCulture);
+
+            csvWriter.WriteHeader<QueryResult>();
+            csvWriter.NextRecord();
+            csvWriter.WriteRecords(Results);
+
+            writer.Flush();
         }
     }
 }

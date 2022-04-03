@@ -1,11 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Globalization;
-using System.IO;
-using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
-using CsvHelper;
-using java.lang.management;
+
 
 namespace FlightHack
 {
@@ -13,106 +10,99 @@ namespace FlightHack
     {
         static async Task Main(string[] args)
         {
+            // ITA Matrix Client
+            string URL = "https://matrix.itasoftware.com/search";
             int SleepTimer = 10;
             int MaxSearchTimeLimit = 40;
-            int InitialNoOfAirports = 0;
-            int NoOfCarriersThreshhold = 10;
+
+            // Airport & Pruning Details
+            string AirortFileLocation = "airports.json";
+            int MinNoOfCarriers = 10;
+            int MinDistance = 40;
+            int MaxDistance = 60;
+            int BinSize = 5;
+
             double AvgDistBtwAirports = 8406.2;
             double OriginalFare = 408.60;
-            string AirortFileLocation = "airports.json";
-            string URL = "https://matrix.itasoftware.com/search";
+            string DumpLegDepartureDate = "11/12/2022";
 
-            string ResultsFileBaseName = "_Results.csv";
-            string ResultsFileFullPath = @"C:\Users\MP\Documents\FlightHack\";
-
-            List<Airport> Airports = Airport.ProcessFile(AirortFileLocation);
-            List<Tuple<Airport, Airport>> DumpConnections = new List<Tuple<Airport, Airport>>();
-            List<QueryResult> Results = new List<QueryResult>();
             ItaMatrixHandler MatrixClient = new ItaMatrixHandler(SleepTimer, MaxSearchTimeLimit, URL);
+            List<QueryResult> Results = new List<QueryResult>();
             List<Task> TaskList = new List<Task>();
 
-            //Console.WriteLine("Calculating AVG Distance");
-            //double AvgDistance = Airport.AverageDistanceBetweenAllAirports(Airports);
-            //Console.WriteLine("Average Distance Between Airports Is: " + AvgDistance);
+            List<List<Tuple<Airport, Airport>>> ChunkedDumLegs = Airport.CompleteAirportPruning(AirortFileLocation, MinNoOfCarriers, MinDistance, MaxDistance, BinSize);
 
-            InitialNoOfAirports = Airports.Count;
-
-            Console.WriteLine("Initial No Of Airports: " + InitialNoOfAirports);
-
-            // We need to prune our airport list so we don't spend years searching
-            // Start by removing small and unpopular ones first, since the likelihood
-            // Of them habing a flight is small anyway
-
-            int EligableAirports = 0;
-
-            for (int i = Airports.Count - 1; i > 0; i--)
+            for (int i = 0; i < ChunkedDumLegs.Count; i++)
             {
-                if (Int32.Parse(Airports[i].Carriers) > NoOfCarriersThreshhold)
+                Console.WriteLine("Going Through Chunk: " + i);
+
+                foreach (Tuple<Airport, Airport> DumpLeg in ChunkedDumLegs[i])
                 {
-                    //Console.WriteLine(i.ToString() + " " + Airports[i].Code);
-                    EligableAirports++;
-                }
-                else
-                {
-                    Airports.RemoveAt(i);
-                }
-            }
-
-            Console.WriteLine(EligableAirports + " Are Eligible Out Of: " + InitialNoOfAirports + " Based On Number Of Carriers Pruning");
-
-            int MinDistance = 30;
-            int MaxDistance = 80;
-            int BinSize = 10;
-
-            // TODO: Don't hack this - do proper splits... precalculate maybe? 
-            // Split the searches into bins of 10
-            for (int i = MinDistance; i < MaxDistance; i += BinSize)
-            {
-                // Now go through each pair and check the distance.
-                // Remove the airports that are too far from each other.
-                // You only need to do distance comparison once (though it shouldn't take too long anyway).
-                DumpConnections = Airport.PruneDumpConnections(Airports, i+BinSize, i);
-
-                Console.WriteLine("We have: " + DumpConnections.Count + " Dump Connections, based on distance pruning");
-
-                foreach (Tuple<Airport, Airport> DumpLeg in DumpConnections)
-                {
-                    var LastTask = new Task(() => MatrixClient.IssueAQueryAsync(DumpLeg.Item1, DumpLeg.Item2, OriginalFare, Results));
+                    var LastTask = new Task(() => MatrixClient.IssueAQueryAsync(DumpLeg.Item1, DumpLeg.Item2, DumpLegDepartureDate, OriginalFare, Results));
                     LastTask.Start();
                     TaskList.Add(LastTask);
                 }
 
                 Task.WaitAll(TaskList.ToArray());
+
+                Thread.Sleep(SleepTimer);
             }
+
+            //Console.WriteLine("Calculating AVG Distance");
+            //double AvgDistance = Airport.AverageDistanceBetweenAllAirports(Airports);
+            //Console.WriteLine("Average Distance Between Airports Is: " + AvgDistance);
+
+            /*            InitialNoOfAirports = Airports.Count;
+
+                        Console.WriteLine("Initial No Of Airports: " + InitialNoOfAirports);*/
+
+            // We need to prune our airport list so we don't spend years searching
+            // Start by removing small and unpopular ones first, since the likelihood
+            // Of them habing a flight is small anyway
+
+            /*            int EligableAirports = 0;
+
+                        for (int i = Airports.Count - 1; i > 0; i--)
+                        {
+                            if (Int32.Parse(Airports[i].Carriers) > NoOfCarriersThreshhold)
+                            {
+                                //Console.WriteLine(i.ToString() + " " + Airports[i].Code);
+                                EligableAirports++;
+                            }
+                            else
+                            {
+                                Airports.RemoveAt(i);
+                            }
+                        }
+
+                        Console.WriteLine(EligableAirports + " Are Eligible Out Of: " + InitialNoOfAirports + " Based On Number Of Carriers Pruning");
+            */
+            // TODO: Don't hack this - do proper splits... precalculate maybe? 
+            // Split the searches into bins of 10
+/*            for (int i = MinDistance; i < MaxDistance; i += BinSize)
+            {
+                // Now go through each pair and check the distance.
+                // Remove the airports that are too far from each other.
+                // You only need to do distance comparison once (though it shouldn't take too long anyway).
+                DumpConnections = Airport.PruneDumpConnections(Airports, i, i + BinSize);
+
+                Console.WriteLine("We have: " + DumpConnections.Count + " Dump Connections, based on distance pruning");
+
+                foreach (Tuple<Airport, Airport> DumpLeg in DumpConnections)
+                {
+                    var LastTask = new Task(() => MatrixClient.IssueAQueryAsync(DumpLeg.Item1, DumpLeg.Item2, DumpLegDepartureDate, OriginalFare, Results));
+                    LastTask.Start();
+                    TaskList.Add(LastTask);
+                }
+
+                Task.WaitAll(TaskList.ToArray());
+
+                Thread.Sleep(SleepTimer);
+            }*/
 
             Console.WriteLine("Completed Flight Searches - saving a file now");
 
-            /*  
-            for (int i = 0; i < DumpConnections.Count; i++)
-            {
-                Results.Add(MatrixClient.IssueAQuery(DumpConnections, OriginalFare, DumpConnections[i].Item1.Code, DumpConnections[i].Item2.Code, i));
-            }
-            */
-
-            ResultsFileFullPath += DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss") + ResultsFileBaseName;
-
-            // Create the file, or overwrite if the file exists.
-            using (FileStream fs = File.Create(ResultsFileFullPath))
-            {
-                byte[] info = new UTF8Encoding(true).GetBytes("This is some text in the file.");
-                fs.Write(info, 0, info.Length);
-            }
-
-            StreamWriter writer = new StreamWriter(ResultsFileFullPath);
-            var csvWriter = new CsvWriter(writer, CultureInfo.CurrentCulture);
-
-            csvWriter.WriteHeader<QueryResult>();
-            csvWriter.NextRecord(); // adds new line after header
-            csvWriter.WriteRecords(Results);
-
-            writer.Flush();
-
-            // Save the results into a CSV file after we're done
+            QueryResult.SaveResultsToFile("", Results);
         }
     }
 }
