@@ -113,7 +113,7 @@ namespace FlightHack
                                 options.AddArgument("no-sandbox");
                                 options.AddArgument("ignore-certificate-errors");
                                 options.AddArgument("ignore-ssl-errors");
-                                options.AddArgument("headless");
+                                //options.AddArgument("headless");
                                 options.AddArgument("disable-extensions");
                                 options.AddArgument("test-type");
                                 options.AddArgument("excludeSwitches");
@@ -202,12 +202,20 @@ namespace FlightHack
                 EAirlingInput2.SendKeys(AirlineInput);
                 EAirlingInput2.SendKeys(Keys.Tab);
 
+                IWebElement EDumpRoutingID = driver.FindElement(By.Id(DumpLegRoutingID));
+                EDumpRoutingID.SendKeys(DumpLegRouting);
+                EDumpRoutingID.SendKeys(Keys.Tab);
+
+                Thread.Sleep(SleepTimer);
+
                 // Add Dump Leg Flexibility
                 Console.WriteLine("Adding Other Settings (Flex Date, Currency, etc)");
                 Thread.Sleep(SleepTimer);
 
                 IWebElement EFlexIDButton = driver.FindElement(By.Id(DumpLegDateFlexIDButton));
                 EFlexIDButton.Click();
+
+                Thread.Sleep(SleepTimer);
 
                 w = new WebDriverWait(driver, TimeSpan.FromMilliseconds(LoadingTimeout));
                 w.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath(PlusMinus2days)));
@@ -218,9 +226,7 @@ namespace FlightHack
                 ECurrencyInput.SendKeys(Currency);
                 ECurrencyInput.SendKeys(Keys.Enter);
 
-                IWebElement EDumpRoutingID = driver.FindElement(By.Id(DumpLegRoutingID));
-                ECurrencyInput.SendKeys(DumpLegRouting);
-                ECurrencyInput.SendKeys(Keys.Enter);
+
 
                 IWebElement EFinalSearchButton = driver.FindElement(By.XPath(SearchButtonXpath));
                 EFinalSearchButton.Click();

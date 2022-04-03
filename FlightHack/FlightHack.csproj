@@ -26,6 +26,9 @@
     <None Update="airports.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="chromedriver.exe">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="Results.csv">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

@@ -23,10 +23,10 @@ namespace FlightHack
 
             // Airport & Pruning Details
             string AirortFileLocation = "airports.json";
-            int MinNoOfCarriers = 1;
-            int MinDistance = 0;
-            int MaxDistance = 300;
-            int BinSize = 10;
+            int MinNoOfCarriers = 10;
+            int MinDistance = 599;
+            int MaxDistance = 600;
+            int BinSize = 1;
 
             // Search Parameters
             double OriginalFare = 408.60;
