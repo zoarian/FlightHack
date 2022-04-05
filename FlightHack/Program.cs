@@ -18,12 +18,14 @@ namespace FlightHack
 
             // Client Initialization
             List<Result> Results = new List<Result>();
+
             DiscordClient Disc = new DiscordClient(DiscordWebhookURL);
             ItaMatrixHandler MatrixClient = new ItaMatrixHandler(ItaMatrixFile);
+
             StreamReader r = new StreamReader(MatrixClient.JsonFileLocation);
             Input input = JsonConvert.DeserializeObject<Input>(r.ReadToEnd());
 
-            double JobTimeTaken = await MatrixClient.StartJobAsync(input, Results, AirortFileLocation);
+            int JobTimeTaken = await MatrixClient.StartJobAsync(input, Results, AirortFileLocation);
 
             ResultsFile = Result.SaveResultsToFile("", Results);
             int NoOFQueries = 100;

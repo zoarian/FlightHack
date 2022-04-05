@@ -6,10 +6,6 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FlightHack", "FlightHack\FlightHack.csproj", "{8ED53878-95BF-47E4-9E5F-3C82DA01030F}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{C5E3D3CA-1440-4CEA-AAFA-C030F8BB1659}"
-	ProjectSection(SolutionItems) = preProject
-		ItaClientQuerySeparation.txt = ItaClientQuerySeparation.txt
-		ItaElementBreakdown.txt = ItaElementBreakdown.txt
-	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

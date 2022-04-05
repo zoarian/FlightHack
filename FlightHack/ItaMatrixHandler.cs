@@ -86,7 +86,7 @@ namespace FlightHack
             this.URL = temp.URL;
         }
 
-        public async Task<double> StartJobAsync(Input Input, List<Result> Results, string AirortFileLocation)
+        public async Task<int> StartJobAsync(Input Input, List<Result> Results, string AirortFileLocation)
         {
             List<Task> allTasks = new List<Task>();
             List<Tuple<Airport, Airport>> AllDumpLegs = Airport.GetAllDumpConnections(AirortFileLocation, Input.Airport.MinNoCarriers, Input.Airport.MinDist, Input.Airport.MaxDist);
@@ -117,7 +117,22 @@ namespace FlightHack
 
             watch.Stop();
 
-            return watch.Elapsed.TotalSeconds;
+            Thread.Sleep(WebElementTimeout);
+
+            KillChromeDrivers();
+
+            return (int)watch.Elapsed.TotalSeconds;
+        }
+
+        private void KillChromeDrivers()
+        {
+            Process process = new Process();
+            ProcessStartInfo startInfo = new ProcessStartInfo();
+            startInfo.WindowStyle = ProcessWindowStyle.Hidden;
+            startInfo.FileName = "cmd.exe";
+            startInfo.Arguments = "taskkill /F /IM chromedriver.exe /T";
+            process.StartInfo = startInfo;
+            process.Start();
         }
 
         public void IssueQueryAsync(Tuple<Airport, Airport> DumpConnection, Input Input, List<Result> Results)
@@ -147,10 +162,17 @@ namespace FlightHack
                                 options.AddArgument("no-sandbox");
                                 options.AddArgument("ignore-certificate-errors");
                                 options.AddArgument("ignore-ssl-errors");
-                                options.AddArgument("headless");
+                                //options.AddArgument("headless");
                                 options.AddArgument("disable-extensions");
                                 options.AddArgument("test-type");
                                 options.AddArgument("excludeSwitches");
+                                options.AddArgument("start-maximized");
+                                options.AddArgument("disable-infobars");
+                                options.AddArgument("--disable-extensions");
+                                options.AddArgument("--no-sandbox");
+                                options.AddArgument("--disable-application-cache");
+                                options.AddArgument("--disable-gpu");
+                                options.AddArgument("--disable-dev-shm-usage");
 
                 ChromeDriverService service = ChromeDriverService.CreateDefaultService();
                                     service.SuppressInitialDiagnosticInformation = true;
@@ -260,7 +282,7 @@ namespace FlightHack
 
             QueryTimer.Stop();
             TimeSpan elapsed = QueryTimer.Elapsed;
-            CurrentSearch.QueryTime = elapsed.TotalSeconds.ToString();
+            CurrentSearch.QueryTime = ((int)elapsed.TotalSeconds).ToString();
 
             Results.Add(CurrentSearch);
         }
