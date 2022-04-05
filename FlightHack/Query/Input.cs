@@ -69,10 +69,10 @@ namespace FlightHack.Query
     public class AirportParm
     {
         [JsonProperty("MinimumDistanceBetweenAirports")]
-        public int MinDist { get; set; }
+        public double MinDist { get; set; }
 
         [JsonProperty("MaximumDistanceBetweenAirports")]
-        public int MaxDist { get; set; }
+        public double MaxDist { get; set; }
 
         [JsonProperty("MinimumNoOfCarriersServicingAnAirport")]
         public int MinNoCarriers { get; set; }

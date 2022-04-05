@@ -46,7 +46,7 @@ namespace FlightHack
             message.Embeds = new List<DiscordEmbed>();
             message.Embeds.Add(embed);
 
-            hook.Send(message);
+            hook.Send(message, new FileInfo(Matrix.JsonFileLocation));
 
             message = new DiscordMessage();
             hook.Send(message, new FileInfo(FilePath));

@@ -4,7 +4,7 @@
   "IsUsingJobTimer": true,
   "IsUsingQueryTimers": true,
   "JsonFileLocation": "C:\\Users\\MP\\Documents\\FlightHack\\Input\\in.json",
-  "NoOfParallelSearches": 6,
+  "NoOfParallelSearches": 8,
   "SearchLimitNoResults": 70,
   "SearchLimitWithResults": 30,
   "SleepTimer": 10,

@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using FlightHack.Query;
 using Newtonsoft.Json;
@@ -23,15 +25,53 @@ namespace FlightHack
             ItaMatrixHandler MatrixClient = new ItaMatrixHandler(ItaMatrixFile);
 
             StreamReader r = new StreamReader(MatrixClient.JsonFileLocation);
-            Input input = JsonConvert.DeserializeObject<Input>(r.ReadToEnd());
+            Input Input = JsonConvert.DeserializeObject<Input>(r.ReadToEnd());
+            int JobTimeTaken = 0;
 
-            int JobTimeTaken = await MatrixClient.StartJobAsync(input, Results, AirortFileLocation);
+            JobTimeTaken = await MatrixClient.StartJobAsync(Input, Results, AirortFileLocation);
+
+
+            /*            List<Task> allTasks = new List<Task>();
+                        List<Tuple<Airport, Airport>> AllDumpLegs = Airport.GetAllDumpConnections(AirortFileLocation, Input.Airport.MinNoCarriers, Input.Airport.MinDist, Input.Airport.MaxDist);
+
+                        var throttler = new SemaphoreSlim(initialCount: MatrixClient.NoOfParallelSearches);
+
+                        int JobTimeTaken = 0;
+
+                        var watch = Stopwatch.StartNew();
+
+                        foreach (var DumpLeg in AllDumpLegs)
+                        {
+                            // do an async wait until we can schedule again
+                            await throttler.WaitAsync();
+
+                            // using Task.Run(...) to run the lambda in its own parallel flow on the threadpool
+                            allTasks.Add(
+                                Task.Run(async () =>
+                                {
+                                    try
+                                    {
+                                        //Console.WriteLine(DumpLeg.Item1.Code + " -> " + DumpLeg.Item2.Code);
+                                        MatrixClient.IssueQueryAsync(DumpLeg, Input, Results);
+                                    }
+                                    finally
+                                    {
+                                        throttler.Release();
+                                    }
+                                }));
+                        }
+
+                        watch.Stop();
+
+                        MatrixClient.KillChromeDrivers();
+
+                        JobTimeTaken = (int)watch.Elapsed.TotalSeconds;*/
 
             ResultsFile = Result.SaveResultsToFile("", Results);
             int NoOFQueries = 100;
 
             // Send file to discord
-            Disc.SendResults(ResultsFile, input, MatrixClient, NoOFQueries, JobTimeTaken.ToString());
+            Disc.SendResults(ResultsFile, Input, MatrixClient, NoOFQueries, JobTimeTaken.ToString());
 
             Environment.Exit(0);
         }

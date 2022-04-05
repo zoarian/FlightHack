@@ -90,23 +90,28 @@ namespace FlightHack
         {
             List<Task> allTasks = new List<Task>();
             List<Tuple<Airport, Airport>> AllDumpLegs = Airport.GetAllDumpConnections(AirortFileLocation, Input.Airport.MinNoCarriers, Input.Airport.MinDist, Input.Airport.MaxDist);
+            List<Input> InputList = new List<Input>();
+
+            Console.WriteLine("# Queries In Parallel: " + NoOfParallelSearches);
 
             var throttler = new SemaphoreSlim(initialCount: NoOfParallelSearches);
 
             var watch = Stopwatch.StartNew();
 
+            int IssuedQueries = 0;
+
             foreach (var DumpLeg in AllDumpLegs)
             {
-                // do an async wait until we can schedule again
                 await throttler.WaitAsync();
 
-                // using Task.Run(...) to run the lambda in its own parallel flow on the threadpool
                 allTasks.Add(
-                    Task.Run(async () =>
+                    Task.Run(() =>
                     {
                         try
                         {
-                            IssueQueryAsync(DumpLeg, Input, Results);
+                            Console.WriteLine("[" + Task.CurrentId.ToString() + "]   " + DumpLeg.Item1.Code + " -> " + DumpLeg.Item2.Code + " QueryNo: " + IssuedQueries);
+                            IssueQueryAsync(DumpLeg, Input, Results, IssuedQueries);
+                            Thread.Sleep(10);
                         }
                         finally
                         {
@@ -117,14 +122,12 @@ namespace FlightHack
 
             watch.Stop();
 
-            Thread.Sleep(WebElementTimeout);
-
             KillChromeDrivers();
 
             return (int)watch.Elapsed.TotalSeconds;
         }
 
-        private void KillChromeDrivers()
+        public void KillChromeDrivers()
         {
             Process process = new Process();
             ProcessStartInfo startInfo = new ProcessStartInfo();
@@ -135,79 +138,70 @@ namespace FlightHack
             process.Start();
         }
 
-        public void IssueQueryAsync(Tuple<Airport, Airport> DumpConnection, Input Input, List<Result> Results)
+        public void IssueQueryAsync(Tuple<Airport, Airport> DumpConnection, Input Input, List<Result> Results, int IssuedQueries)
         {
             // Add DumpLeg data to our input
-            Input.DumpLeg.OriginCity = DumpConnection.Item1.Code;
-            Input.DumpLeg.DestinationCity = DumpConnection.Item2.Code;
+            //Input.DumpLeg.OriginCity = DumpConnection.Item1.Code;
+            //Input.DumpLeg.DestinationCity = DumpConnection.Item2.Code;
             Input.DumpLeg.RoutingCode = "N";
 
-            Result  CurrentSearch = new Result();
-                    CurrentSearch.DistanceBetweenDumpAirports = Airport.DistanceBetweenAirports(DumpConnection.Item1, DumpConnection.Item2);
-                    CurrentSearch.NewFare = 0;
-                    CurrentSearch.TimeStamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
-                    CurrentSearch.SumOfCarriers = (Int32.Parse(DumpConnection.Item1.Carriers) + Int32.Parse(DumpConnection.Item2.Carriers)).ToString();
-                    CurrentSearch.DumpLegOriginCode = Input.DumpLeg.OriginCity;
-                    CurrentSearch.DumpLegDestCode = Input.DumpLeg.DestinationCity;
+            Console.WriteLine("[" + Task.CurrentId.ToString() + "]   " + "Doing Dump Leg Connection: " + DumpConnection.Item1.Code + " -> " + DumpConnection.Item2.Code + " QueryNo: " + IssuedQueries++);
+
+            Result CurrentSearch = new Result();
+            CurrentSearch.DistanceBetweenDumpAirports = Airport.DistanceBetweenAirports(DumpConnection.Item1, DumpConnection.Item2);
+            CurrentSearch.NewFare = 0;
+            CurrentSearch.TimeStamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            CurrentSearch.SumOfCarriers = (Int32.Parse(DumpConnection.Item1.Carriers) + Int32.Parse(DumpConnection.Item2.Carriers)).ToString();
+            CurrentSearch.DumpLegOriginCode = DumpConnection.Item1.Code;
+            CurrentSearch.DumpLegDestCode = DumpConnection.Item2.Code;
 
             var QueryTimer = Stopwatch.StartNew();
 
             try
             {
-                Console.WriteLine("Doing Dump Leg Connection: " + Input.DumpLeg.OriginCity + " -> " + Input.DumpLeg.DestinationCity);
-
-                ChromeOptions   options = new ChromeOptions();
-                                options.AddArgument("log-level=3");
-                                options.AddArgument("silent");
-                                options.AddArgument("no-sandbox");
-                                options.AddArgument("ignore-certificate-errors");
-                                options.AddArgument("ignore-ssl-errors");
-                                //options.AddArgument("headless");
-                                options.AddArgument("disable-extensions");
-                                options.AddArgument("test-type");
-                                options.AddArgument("excludeSwitches");
-                                options.AddArgument("start-maximized");
-                                options.AddArgument("disable-infobars");
-                                options.AddArgument("--disable-extensions");
-                                options.AddArgument("--no-sandbox");
-                                options.AddArgument("--disable-application-cache");
-                                options.AddArgument("--disable-gpu");
-                                options.AddArgument("--disable-dev-shm-usage");
+                ChromeOptions options = new ChromeOptions();
+                options.AddArgument("log-level=3");
+                options.AddArgument("silent");
+                options.AddArgument("no-sandbox");
+                options.AddArgument("ignore-certificate-errors");
+                options.AddArgument("ignore-ssl-errors");
+                options.AddArgument("headless");
+                options.AddArgument("disable-extensions");
+                options.AddArgument("test-type");
+                options.AddArgument("excludeSwitches");
+                options.AddArgument("start-maximized");
+                options.AddArgument("disable-infobars");
+                options.AddArgument("--disable-extensions");
+                options.AddArgument("--no-sandbox");
+                options.AddArgument("--disable-application-cache");
+                options.AddArgument("--disable-gpu");
+                options.AddArgument("--disable-dev-shm-usage");
 
                 ChromeDriverService service = ChromeDriverService.CreateDefaultService();
-                                    service.SuppressInitialDiagnosticInformation = true;
-                                    service.HideCommandPromptWindow = true;
+                service.SuppressInitialDiagnosticInformation = true;
+                service.HideCommandPromptWindow = true;
 
-                IWebDriver  Driver = new ChromeDriver(service, options);
-                            Driver.Url = URL;
-
-                Console.WriteLine("Started Chrome Driver");
+                IWebDriver Driver = new ChromeDriver(service, options, TimeSpan.FromMinutes(3));
+                Driver.Url = URL;
 
                 WebDriverWait w = new WebDriverWait(Driver, TimeSpan.FromMilliseconds(WebElementTimeout));
-                              w.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.Id(MultiCityTabID)));
+                w.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.Id(MultiCityTabID)));
 
                 IWebElement EMultiButton = Driver.FindElement(By.Id(MultiCityTabID));
-                            EMultiButton.Click();
-
-                Console.WriteLine("Changed Tabs");
+                EMultiButton.Click();
 
                 IWebElement EAddFlights = Driver.FindElement(By.XPath(AddFlightButtonXPath));
-                for (int i = 0; i < Input.FixedLegs.Count; i++) {  EAddFlights.Click(); }
+                for (int i = 0; i < Input.FixedLegs.Count; i++) { EAddFlights.Click(); }
 
-                Console.WriteLine("Added Empty Flight Fields");
                 Thread.Sleep(SleepTimer); // Might not be needed
 
                 IWebElement EAdvancedSearchButton = Driver.FindElement(By.XPath(AdvancedButtonID));
                 EAdvancedSearchButton.Click();
 
-                Console.WriteLine("Added Advanced Search Features");
                 Thread.Sleep(SleepTimer); // Might not be needed
 
-                PupulateLegs(Driver, Input);
+                PupulateLegs(Driver, Input, DumpConnection);
 
-                Console.WriteLine("Legs Populated");
-
-                Console.WriteLine("Adding Other Settings (Flex Date, Currency, etc)");
                 Thread.Sleep(SleepTimer);
 
                 IWebElement ECurrencyInput = Driver.FindElement(By.Id(CurrencyID));
@@ -217,7 +211,7 @@ namespace FlightHack
                 IWebElement EFinalSearchButton = Driver.FindElement(By.XPath(SearchButtonXpath));
                 EFinalSearchButton.Click();
 
-                Console.WriteLine("Searching For Flights...");
+                //Console.WriteLine("Searching For Flights...");
 
                 // TODO: Change this so we check if either NoResults or QueryResults are returned - asynch maybe?
                 try
@@ -225,15 +219,15 @@ namespace FlightHack
                     w = new WebDriverWait(Driver, TimeSpan.FromSeconds(SearchLimitNoResults));
                     w.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath(NoResults)));
 
-                    Console.WriteLine("No flights match the criteria");
+                    Console.WriteLine("[" + Task.CurrentId.ToString() + "]   " + "No flights match the criteria");
                     CurrentSearch.QueryMessage = "No flights match the criteria";
                 }
                 catch (Exception ex)
                 {
                     try
                     {
-                        Console.WriteLine("Error: " + ex.Message);
-                        Console.WriteLine("We've not found a new search button - searching for prices now");
+                        Console.WriteLine("[" + Task.CurrentId.ToString() + "]   " + "Error: " + ex.Message);
+                        Console.WriteLine("[" + Task.CurrentId.ToString() + "]   " + "We've not found a new search button - searching for prices now");
 
                         w = new WebDriverWait(Driver, TimeSpan.FromSeconds(SearchLimitWithResults));
                         w.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath(QueryResultXPath)));
@@ -242,30 +236,30 @@ namespace FlightHack
 
                         CurrentSearch.NewFare = double.Parse(ENewPrice.Text.Trim('£'));
 
-                        Console.WriteLine("Price with dump leg: " + Input.FixedLegs[0].OriginCity + "->" + Input.FixedLegs[0].DestinationCity + " is: " + ENewPrice.Text);
+                        Console.WriteLine("[" + Task.CurrentId.ToString() + "]   " + "Price with dump leg: " + DumpConnection.Item1.Code + "->" + DumpConnection.Item2.Code + " is: " + ENewPrice.Text);
 
                         if (CurrentSearch.NewFare < OriginalFare)
-                            Console.WriteLine("We've got a cheaper fare: " + CurrentSearch.NewFare);
+                            Console.WriteLine("[" + Task.CurrentId.ToString() + "]   " + "We've got a cheaper fare: " + CurrentSearch.NewFare);
                         else
-                            Console.WriteLine("No Luck: " + CurrentSearch.NewFare);
+                            Console.WriteLine("[" + Task.CurrentId.ToString() + "]   " + "No Luck: " + CurrentSearch.NewFare);
 
                         CurrentSearch.QueryMessage = "We've not found a new search button - searching for prices now";
                     }
                     catch (Exception e)
                     {
-                        Console.WriteLine("Error: " + e.Message);
+                        Console.WriteLine("[" + Task.CurrentId.ToString() + "]   " + "Error: " + e.Message);
 
                         try
                         {
                             w = new WebDriverWait(Driver, TimeSpan.FromSeconds(SearchLimitNoResults));
                             w.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath(NoResults)));
 
-                            Console.WriteLine("No flights match the criteria");
+                            Console.WriteLine("[" + Task.CurrentId.ToString() + "]   " + "No flights match the criteria");
                             CurrentSearch.QueryMessage = "No flights match the criteria";
                         }
                         catch (Exception exc)
                         {
-                            Console.WriteLine("Error: " + exc.Message);
+                            Console.WriteLine("[" + Task.CurrentId.ToString() + "]   " + "Error: " + exc.Message);
                             CurrentSearch.QueryMessage = exc.Message;
                         }
                     }
@@ -275,10 +269,16 @@ namespace FlightHack
             }
             catch (Exception e)
             {
-                Console.WriteLine("Exception in Overall Query: " + e.Message);
+                Console.WriteLine("[" + Task.CurrentId.ToString() + "]   " + "Exception in Overall Query: " + e.Message);
                 CurrentSearch.QueryMessage = e.Message;
                 CurrentSearch.NewFare = -1;
             }
+            finally
+            {
+                //Driver.Quit();
+            }
+
+            Thread.Sleep(100);
 
             QueryTimer.Stop();
             TimeSpan elapsed = QueryTimer.Elapsed;
@@ -287,15 +287,15 @@ namespace FlightHack
             Results.Add(CurrentSearch);
         }
 
-        public void PupulateLegs(IWebDriver Driver, Input Input)
+        public void PupulateLegs(IWebDriver Driver, Input Input, Tuple<Airport, Airport> DumpConnection)
         {
-            Console.WriteLine("Populating Legs With Flight Data");
+            //Console.WriteLine("Populating Legs With Flight Data");
 
             IWebElement WebEl;
 
-            for (int LegNo = 0; LegNo < Input.FixedLegs.Count; LegNo++) 
+            for (int LegNo = 0; LegNo < Input.FixedLegs.Count; LegNo++)
             {
-                Console.WriteLine("Fixed Leg: " + LegNo);
+                //Console.WriteLine("Fixed Leg: " + LegNo);
 
                 LegIDs Leg = new LegIDs(LegNo);
 
@@ -307,13 +307,13 @@ namespace FlightHack
                 WebEl.SendKeys(Input.FixedLegs[LegNo].DestinationCity);
                 WebEl.SendKeys(Keys.Tab);
 
-                Console.WriteLine(Input.FixedLegs[LegNo].Date);
+                //Console.WriteLine(Input.FixedLegs[LegNo].Date);
 
                 WebEl = Driver.FindElement(By.Id(Leg.DateID));
                 WebEl.SendKeys(Input.FixedLegs[LegNo].Date);
                 WebEl.SendKeys(Keys.Tab);
 
-                if(!String.IsNullOrEmpty(Input.FixedLegs[LegNo].RoutingCode))
+                if (!String.IsNullOrEmpty(Input.FixedLegs[LegNo].RoutingCode))
                 {
                     WebEl = Driver.FindElement(By.Id(Leg.RoutingCodeID));
                     WebEl.SendKeys(Input.FixedLegs[LegNo].RoutingCode);
@@ -344,16 +344,16 @@ namespace FlightHack
 
             int LegN = Input.FixedLegs.Count;
 
-            Console.WriteLine("Populating Dump Leg Now");
+            //Console.WriteLine("Populating Dump Leg Now");
 
             LegIDs DLeg = new LegIDs(LegN);
 
             WebEl = Driver.FindElement(By.Id(DLeg.OriginCityID));
-            WebEl.SendKeys(Input.DumpLeg.OriginCity);
+            WebEl.SendKeys(DumpConnection.Item1.Code);
             WebEl.SendKeys(Keys.Tab);
 
             WebEl = Driver.FindElement(By.Id(DLeg.DestinationCityID));
-            WebEl.SendKeys(Input.DumpLeg.DestinationCity);
+            WebEl.SendKeys(DumpConnection.Item2.Code);
             WebEl.SendKeys(Keys.Tab);
 
             WebEl = Driver.FindElement(By.Id(DLeg.DateID));
@@ -394,9 +394,9 @@ namespace FlightHack
                 IWebElement EDumpDateFlex = Driver.FindElement(By.XPath(PlusMinus2days));
                 EDumpDateFlex.Click();
 
-/*                WebEl = Driver.FindElement(By.Id(DLeg.DateFlexibilityID));
-                WebEl.SendKeys(Input.DumpLeg.DateFlexibility);
-                WebEl.SendKeys(Keys.Tab);*/
+                /*                WebEl = Driver.FindElement(By.Id(DLeg.DateFlexibilityID));
+                                WebEl.SendKeys(Input.DumpLeg.DateFlexibility);
+                                WebEl.SendKeys(Keys.Tab);*/
             }
         }
     }
@@ -424,14 +424,14 @@ namespace FlightHack
             DateID = "mat-input-";
             DateOptionID = "mat-select-value-";
             DateFlexibilityID = "mat-select-value-";
-        } 
-        
+        }
+
         public LegIDs(int LegNo)
         {
-            OriginCityID = "mat-chip-list-input-" + (LegNo*2 + OInit);
+            OriginCityID = "mat-chip-list-input-" + (LegNo * 2 + OInit);
             DestinationCityID = "mat-chip-list-input-" + (LegNo * 2 + OInit + 1);
 
-            if(LegNo == 0)
+            if (LegNo == 0)
             {
                 RoutingCodeID = "mat-input-19";
                 ExtensionCodeID = "mat-input-20";
@@ -441,7 +441,7 @@ namespace FlightHack
             }
             else
             {
-                RoutingCodeID = "mat-input-" + ((LegNo-1)*3 + RInit); // 22
+                RoutingCodeID = "mat-input-" + ((LegNo - 1) * 3 + RInit); // 22
                 ExtensionCodeID = "mat-input-" + ((LegNo - 1) * 3 + RInit + 1); //23
                 DateID = "mat-input-" + ((LegNo - 1) * 3 + RInit + 2); //24
                 DateOptionID = "mat-select-value-" + ((LegNo - 1) * 4 + DInit); //27
