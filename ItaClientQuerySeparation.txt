@@ -1,0 +1,54 @@
+ItaMatrixClient 
+	Search & Processing Parameters (independent of query parameters):
+		SleepTimer
+		SearchLimitNoResults
+		SearchLimitWithResults
+		URL
+		Browser
+		NoOfParallelSearches
+		IsUsingJobTimer
+		IsUsingQueryTimers
+		IsTakingResultScreenshots
+		JsonFileLocation
+		
+		// General buttons, used in every search
+		MultiCityTabButton
+		AddFlightButton
+		SearchButton
+		AdvancedControlsButton
+		
+		// Results path
+		QueryResultFound
+		NoResultsFound
+	QueryInput
+		General
+			NoOfAdults
+			NoOfSeniors
+			NoOfYouths
+			NoOfChildren
+			NoOfInfantsInSeat
+			NoOfInfantsInLap
+			Stops
+			ExtraStops
+			Cabin
+			Currency
+			SalesCity
+			AllowAirportChanges
+			OnlyShowFlightsAndPricesWithAvailableSeats	
+		Fixed Legs
+			Leg 1
+				OriginCity
+				DestinationCity
+				RoutingCode
+				ExtensionCode
+				Date
+				DateOption
+				DateFlexibility
+			Leg 2
+			...
+			Leg X
+		SearchSpaceConstraints
+			MinimumDistanceBetweenAirports
+			MaximumDistanceBetweenAirports
+			MinimumNoOfCarriersServicingAnAirport
+		

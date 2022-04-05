@@ -5,9 +5,9 @@ using System.IO;
 using System.Text;
 using CsvHelper;
 
-namespace FlightHack
+namespace FlightHack.Query
 {
-    public class QueryResult
+    public class Result
     {
         public string QueryTime { get; set; }
         public double NewFare { get; set; }
@@ -19,8 +19,20 @@ namespace FlightHack
         public string TimeStamp { get; set; }
         public string QueryMessage { get; set; }
 
-        public QueryResult() { }
-        public QueryResult(string QueryTime, double NewFare, double DistanceBetweenDumpAirports, string DumpLegOriginCode, string DumpLegDestCode, string DumpLegDepartureDate, string TimeStamp, string QueryMessage, int SumOfCarriers)
+        public Result() 
+        {
+            NewFare = 0;
+            DistanceBetweenDumpAirports = 0;
+            QueryTime = "";
+            DumpLegOriginCode = "";
+            DumpLegDestCode = "";
+            SumOfCarriers = "";
+            DumpLegDepartureDate = "";
+            TimeStamp = "";
+            QueryMessage = "Initiated Query";
+        }
+
+        public Result(string QueryTime, double NewFare, double DistanceBetweenDumpAirports, string DumpLegOriginCode, string DumpLegDestCode, string DumpLegDepartureDate, string TimeStamp, string QueryMessage, int SumOfCarriers)
         {
             this.QueryTime = QueryTime;
             this.NewFare = NewFare;
@@ -33,7 +45,7 @@ namespace FlightHack
             this.SumOfCarriers = SumOfCarriers.ToString();
         }
 
-        public static string SaveResultsToFile(string FilePath, List<QueryResult> Results)
+        public static string SaveResultsToFile(string FilePath, List<Result> Results)
         {
             string ResultsFileBaseName = "_Results.csv";
             string ResultsFileFullPath = @"C:\Users\MP\Documents\FlightHack\" + DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss") + ResultsFileBaseName;
@@ -48,7 +60,7 @@ namespace FlightHack
             StreamWriter writer = new StreamWriter(ResultsFileFullPath);
             var csvWriter = new CsvWriter(writer, CultureInfo.CurrentCulture);
 
-            csvWriter.WriteHeader<QueryResult>();
+            csvWriter.WriteHeader<Result>();
             csvWriter.NextRecord();
             csvWriter.WriteRecords(Results);
 

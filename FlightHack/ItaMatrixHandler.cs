@@ -6,24 +6,33 @@ using Newtonsoft.Json;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Support.UI;
+using FlightHack.Query;
 
 namespace FlightHack
 {
     public class ItaMatrixHandler
     {
-        // Search Variables
+        [JsonProperty("URL")]
+        public string URL { get; set; }
+
         public double OriginalFare { get; set; }
         public int SleepTimer { get; set; } 
         public int SearchLimitNoResults { get; set; }
 
         public int SearchLimitWithResults { get; set; }
-        public string URL { get; set; }
+
 
         // Inital Search Form IDs and XPaths
         const string MultiCityTabID = "mat-tab-label-0-2";
         const string AddFlightButtonXPath = "/html/body/app-root/matrix-search-page/mat-card[1]/mat-card-content/form/matrix-select-flight-tabs/mat-tab-group/div/mat-tab-body[3]/div/matrix-multi-city-search-tab/div/div[2]/mat-chip";
         const string SearchButtonXpath = "/html/body/app-root/matrix-search-page/mat-card[1]/mat-card-content/form/div[2]/button";
 
+        // Result Page IDs and Xpaths
+        const string QueryResultXPath = "/html/body/app-root/matrix-flights-page/mat-card/mat-card-content/mat-tab-group/div/mat-tab-body[1]/div/div/matrix-result-set-panel/div/div/table/tbody/tr[1]/td[1]/div/button/span[1]";
+        const string NoResults = "/html/body/app-root/matrix-flights-page/mat-card/mat-card-content/mat-tab-group/div/mat-tab-body[1]/div/div/matrix-result-set-panel/div/matrix-no-flights-found/div[1]";
+
+
+        // Query Specific IDs/XPaths
         const string LegOneOriginCityCodeID = "mat-chip-list-input-4";
         const string LegOneDestinationCityCodeID = "mat-chip-list-input-5";
         const string LegOneDepartureDateID = "mat-input-8";
@@ -47,11 +56,6 @@ namespace FlightHack
         const string DumpLegRoutingID = "mat-input-25";
 
         const string CurrencyID = "mat-input-6";
-
-        // Result Page IDs and Xpaths
-        const string QueryResultXPath = "/html/body/app-root/matrix-flights-page/mat-card/mat-card-content/mat-tab-group/div/mat-tab-body[1]/div/div/matrix-result-set-panel/div/div/table/tbody/tr[1]/td[1]/div/button/span[1]";
-        const string StrtNewSearchXPath = "/html/body/app-root/matrix-flights-page/mat-card/mat-card-content/mat-tab-group/div/mat-tab-body[1]/div/div/matrix-result-set-panel/div/matrix-no-flights-found/button";
-        const string NoResults = "/html/body/app-root/matrix-flights-page/mat-card/mat-card-content/mat-tab-group/div/mat-tab-body[1]/div/div/matrix-result-set-panel/div/matrix-no-flights-found/div[1]";
 
         // Input data - this will change depending on the query and the fuel dump flights
         public string AirlineInput { get ; set; }
@@ -95,8 +99,11 @@ namespace FlightHack
             LegTwoDepartureDate = "06/14/2022";
         }
 
-        public void IssueAQueryAsync(Airport Airport1, Airport Airport2, string DumpLegDepartureDate, double OriginalFare, List<QueryResult> Results)
+        public void IssueAQueryAsync(Airport Airport1, Airport Airport2, string DumpLegDepartureDate, double OriginalFare, List<Result> Results)
         {
+            Result CurrentSearch = new Result();
+            
+            // Replace the below with CurrentSearch
             string QueryMessage;
             string QueryTime;
             double DistanceBetweenDumpAirports = Airport.DistanceBetweenAirports(Airport1, Airport2);
@@ -307,14 +314,7 @@ namespace FlightHack
             TimeSpan elapsed = QueryTimer.Elapsed;
             QueryTime = elapsed.ToString(@"m\:ss");
 
-            Results.Add(new QueryResult(QueryTime, NewFare, DistanceBetweenDumpAirports, DumpLegOriginCityCode, DumpLegDestinationCityCode, DumpLegDepartureDate, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), QueryMessage, (Int32.Parse(Airport1.Carriers) + Int32.Parse(Airport2.Carriers))));
-
+            Results.Add(new Result(QueryTime, NewFare, DistanceBetweenDumpAirports, DumpLegOriginCityCode, DumpLegDestinationCityCode, DumpLegDepartureDate, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), QueryMessage, (Int32.Parse(Airport1.Carriers) + Int32.Parse(Airport2.Carriers))));
         }
-    }
-
-    public class ItaWebElement
-    {
-        [JsonProperty("code")]
-        public string Name { get; set; }
     }
 }

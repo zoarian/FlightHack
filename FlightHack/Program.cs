@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using FlightHack.Query;
 
 namespace FlightHack
 {
@@ -22,7 +23,7 @@ namespace FlightHack
             int SearchLimitWithResults = 30;
 
             // Airport & Pruning Details
-            string AirortFileLocation = "Input/airports.json";
+            string AirortFileLocation = "Input/Airports.json";
             int MinNoOfCarriers = 20;
             int MinDistance = 1;
             int MaxDistance = 600;
@@ -36,7 +37,7 @@ namespace FlightHack
             string ResultsFile;
 
             // Used for searches
-            List<QueryResult> Results = new List<QueryResult>();
+            List<Result> Results = new List<Result>();
             List<Task> allTasks = new List<Task>();
             ItaMatrixHandler MatrixClient = new ItaMatrixHandler(SleepTimer, SearchLimitNoResults, SearchLimitWithResults, URL, OriginalFare, DumpLegRoutingCode, FirstLegRouting, SecondLegRouting);
             List<Tuple<Airport, Airport>> AllDumpLegs = Airport.GetAllDumpConnections(AirortFileLocation, MinNoOfCarriers, MinDistance, MaxDistance, BinSize);
@@ -70,7 +71,7 @@ namespace FlightHack
             Console.WriteLine("Completed Flight Searches - saving a file now");
 
             // Save results in a file
-            ResultsFile = QueryResult.SaveResultsToFile("", Results);
+            ResultsFile = Result.SaveResultsToFile("", Results);
 
             // Send file to discord
             Disc.SendResults(ResultsFile, MatrixClient, BinSize, MinDistance, MaxDistance, MinNoOfCarriers, AllDumpLegs.Count, watch.Elapsed.ToString(@"m\:ss"));
@@ -79,12 +80,12 @@ namespace FlightHack
         private void StartUp()
         {
             // Read datatypes such as the airport codes
-            // Initialize Clients
+            // Initialize clients
         }
 
         private void Shutdown()
         {
-
+            // Kill any remaining chromedrivers
         }
     }
 }
