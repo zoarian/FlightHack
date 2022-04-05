@@ -159,7 +159,7 @@ namespace FlightHack
         /// <param name="MaxDistance">Maximum distance for the search</param>
         /// <param name="BinSize">Used for splitting the list into managable chunks, so we don't kill the chrome driver</param>
         /// <returns></returns>
-        public static List<Tuple<Airport, Airport>> GetAllDumpConnections(string AirportFileLocation, int MinNoOfCarriers, int MinDistance, int MaxDistance, int BinSize)
+        public static List<Tuple<Airport, Airport>> GetAllDumpConnections(string AirportFileLocation, int MinNoOfCarriers, int MinDistance, int MaxDistance)
         {
             //List<Tuple<Airport, Airport>> DumpConnections = new List<Tuple<Airport, Airport>>();
 

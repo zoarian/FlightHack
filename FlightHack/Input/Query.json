@@ -28,7 +28,7 @@
       "ExtensionCode": "boo",
       "Date": "08/26/2022",
       "DateOption": "Departure",
-      "DateFlexibility": "+/- 2 days"
+      "IsFixed": true
     },
     {
       "OriginCity": "YYZ",
@@ -37,10 +37,11 @@
       "ExtensionCode": "boo",
       "Date": "06/14/2022",
       "DateOption": "Departure",
-      "DateFlexibility": "+/- 2 days"
+      "IsFixed": true
     }
   ],
   "DumpLeg": {
-    "Date": "08/26/2022"
+    "Date": "06/14/2022",
+    "DateFlexibility": "+/- 2 days"
   }
 }
