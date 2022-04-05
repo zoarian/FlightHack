@@ -22,7 +22,7 @@ namespace FlightHack
             int SearchLimitWithResults = 30;
 
             // Airport & Pruning Details
-            string AirortFileLocation = "airports.json";
+            string AirortFileLocation = "Input/airports.json";
             int MinNoOfCarriers = 20;
             int MinDistance = 1;
             int MaxDistance = 600;
@@ -74,6 +74,16 @@ namespace FlightHack
 
             // Send file to discord
             Disc.SendResults(ResultsFile, MatrixClient, BinSize, MinDistance, MaxDistance, MinNoOfCarriers, AllDumpLegs.Count, watch.Elapsed.ToString(@"m\:ss"));
+        }
+
+        private void StartUp()
+        {
+            // Read datatypes such as the airport codes
+            // Initialize Clients
+        }
+
+        private void Shutdown()
+        {
 
         }
     }

@@ -23,15 +23,16 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Update="airports.json">
+    <None Update="Input\airports.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="chromedriver.exe">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="Results.csv">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="Secrets\" />
   </ItemGroup>
 
 </Project>

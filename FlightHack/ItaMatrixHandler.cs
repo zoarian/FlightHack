@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
+using Newtonsoft.Json;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Support.UI;
@@ -72,7 +70,6 @@ namespace FlightHack
         public string LegOneRoutingCode { get; set; }
         public string LegTwoRoutingCode { get; set; }
         public string DumpLegRouting { get; set; }
-
 
         public ItaMatrixHandler(int SleepTimer, int MaxSearchTimeLimit, int SearchLimitWithResults, string URL, double OriginalFare, string DumpLegRouting, string LegOneRoutingCode, string LegTwoRoutingCode)
         {
@@ -313,5 +310,11 @@ namespace FlightHack
             Results.Add(new QueryResult(QueryTime, NewFare, DistanceBetweenDumpAirports, DumpLegOriginCityCode, DumpLegDestinationCityCode, DumpLegDepartureDate, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), QueryMessage, (Int32.Parse(Airport1.Carriers) + Int32.Parse(Airport2.Carriers))));
 
         }
+    }
+
+    public class ItaWebElement
+    {
+        [JsonProperty("code")]
+        public string Name { get; set; }
     }
 }
