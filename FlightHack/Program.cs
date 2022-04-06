@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using FlightHack.Query;
+using Newtonsoft.Json;
 
 namespace FlightHack
 {
@@ -10,81 +13,78 @@ namespace FlightHack
     {
         static async Task Main(string[] args)
         {
-            // Discord Client
-            string WebhookURL = "https://discord.com/api/webhooks/959509111035289640/z3S1WJ7LVnI7TFgQGZdCrLHziUwPNkuUglxhmxRKegiP4XiCbd7WdeMMUiOzfmN0Kp_f";
-            DiscordClient Disc = new DiscordClient(WebhookURL); 
-
-            // ITA Matrix Client
-            string URL = "https://matrix.itasoftware.com/search";
-            string DumpLegRoutingCode = "N";
-            int SleepTimer = 10;
-            int SearchLimitNoResults = 70;
-            int SearchLimitWithResults = 30;
-
-            // Airport & Pruning Details
-            string AirortFileLocation = "Input/airports.json";
-            int MinNoOfCarriers = 20;
-            int MinDistance = 1;
-            int MaxDistance = 600;
-            int BinSize = 8;
-
-            // Search Parameters
-            double OriginalFare = 252;
-            string FirstLegRouting = "F:WS51 F:WS273";
-            string SecondLegRouting = "F:WS16";
-            string DumpLegDepartureDate = "08/26/2022";
             string ResultsFile;
+            string AirortFileLocation = "Input/Airports.json";
+            string ItaMatrixFile = "Input/ItaMatricClient.json";
+            string DiscordWebhookURL = "https://discord.com/api/webhooks/959509111035289640/z3S1WJ7LVnI7TFgQGZdCrLHziUwPNkuUglxhmxRKegiP4XiCbd7WdeMMUiOzfmN0Kp_f";
 
-            // Used for searches
-            List<QueryResult> Results = new List<QueryResult>();
-            List<Task> allTasks = new List<Task>();
-            ItaMatrixHandler MatrixClient = new ItaMatrixHandler(SleepTimer, SearchLimitNoResults, SearchLimitWithResults, URL, OriginalFare, DumpLegRoutingCode, FirstLegRouting, SecondLegRouting);
-            List<Tuple<Airport, Airport>> AllDumpLegs = Airport.GetAllDumpConnections(AirortFileLocation, MinNoOfCarriers, MinDistance, MaxDistance, BinSize);
+            // Client Initialization
+            List<Result> Results = new List<Result>();
 
-            var throttler = new SemaphoreSlim(initialCount: BinSize);
+            DiscordClient Disc = new DiscordClient(DiscordWebhookURL);
+            ItaMatrixHandler MatrixClient = new ItaMatrixHandler(ItaMatrixFile);
 
-            var watch = Stopwatch.StartNew();
+            StreamReader r = new StreamReader(MatrixClient.JsonFileLocation);
+            Input Input = JsonConvert.DeserializeObject<Input>(r.ReadToEnd());
+            int JobTimeTaken = 0;
 
-            foreach (var DumpLeg in AllDumpLegs)
-            {
-                // do an async wait until we can schedule again
-                await throttler.WaitAsync();
+            JobTimeTaken = await MatrixClient.StartJobAsync(Input, Results, AirortFileLocation);
 
-                // using Task.Run(...) to run the lambda in its own parallel flow on the threadpool
-                allTasks.Add(
-                    Task.Run(async () =>
-                    {
-                        try
+
+            /*            List<Task> allTasks = new List<Task>();
+                        List<Tuple<Airport, Airport>> AllDumpLegs = Airport.GetAllDumpConnections(AirortFileLocation, Input.Airport.MinNoCarriers, Input.Airport.MinDist, Input.Airport.MaxDist);
+
+                        var throttler = new SemaphoreSlim(initialCount: MatrixClient.NoOfParallelSearches);
+
+                        int JobTimeTaken = 0;
+
+                        var watch = Stopwatch.StartNew();
+
+                        foreach (var DumpLeg in AllDumpLegs)
                         {
-                            MatrixClient.IssueAQueryAsync(DumpLeg.Item1, DumpLeg.Item2, DumpLegDepartureDate, OriginalFare, Results);
+                            // do an async wait until we can schedule again
+                            await throttler.WaitAsync();
+
+                            // using Task.Run(...) to run the lambda in its own parallel flow on the threadpool
+                            allTasks.Add(
+                                Task.Run(async () =>
+                                {
+                                    try
+                                    {
+                                        //Console.WriteLine(DumpLeg.Item1.Code + " -> " + DumpLeg.Item2.Code);
+                                        MatrixClient.IssueQueryAsync(DumpLeg, Input, Results);
+                                    }
+                                    finally
+                                    {
+                                        throttler.Release();
+                                    }
+                                }));
                         }
-                        finally
-                        {
-                            throttler.Release();
-                        }
-                    }));
-            }
 
-            watch.Stop();
+                        watch.Stop();
 
-            Console.WriteLine("Completed Flight Searches - saving a file now");
+                        MatrixClient.KillChromeDrivers();
 
-            // Save results in a file
-            ResultsFile = QueryResult.SaveResultsToFile("", Results);
+                        JobTimeTaken = (int)watch.Elapsed.TotalSeconds;*/
+
+            ResultsFile = Result.SaveResultsToFile("", Results);
+            int NoOFQueries = 100;
 
             // Send file to discord
-            Disc.SendResults(ResultsFile, MatrixClient, BinSize, MinDistance, MaxDistance, MinNoOfCarriers, AllDumpLegs.Count, watch.Elapsed.ToString(@"m\:ss"));
+            Disc.SendResults(ResultsFile, Input, MatrixClient, NoOFQueries, JobTimeTaken.ToString());
+
+            Environment.Exit(0);
         }
 
         private void StartUp()
         {
             // Read datatypes such as the airport codes
-            // Initialize Clients
+            // Initialize clients
         }
 
         private void Shutdown()
         {
-
+            // Kill any remaining chromedrivers
         }
     }
 }

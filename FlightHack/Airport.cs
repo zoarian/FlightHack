@@ -109,8 +109,6 @@ namespace FlightHack
 
         private static void PruneAirportsBasedOnCarriers(List<Airport> Airports, int MinNoOfCarriers)
         {
-            Console.WriteLine("Pruning airports based on Carriers, MinNoOfCarriers: " + MinNoOfCarriers);
-
             for (int i = Airports.Count - 1; i > 0; i--)
             {
                 if (Int32.Parse(Airports[i].Carriers) > MinNoOfCarriers)
@@ -122,8 +120,6 @@ namespace FlightHack
                     Airports.RemoveAt(i);
                 }
             }
-
-            Console.WriteLine("Pruning Completed");
         }
 
         public static List<Tuple<Airport, Airport>> PruneDumpConnections(List<Airport> Airports, double MinDistance, double MaxDistance)
@@ -159,7 +155,7 @@ namespace FlightHack
         /// <param name="MaxDistance">Maximum distance for the search</param>
         /// <param name="BinSize">Used for splitting the list into managable chunks, so we don't kill the chrome driver</param>
         /// <returns></returns>
-        public static List<Tuple<Airport, Airport>> GetAllDumpConnections(string AirportFileLocation, int MinNoOfCarriers, int MinDistance, int MaxDistance, int BinSize)
+        public static List<Tuple<Airport, Airport>> GetAllDumpConnections(string AirportFileLocation, int MinNoOfCarriers, double MinDistance, double MaxDistance)
         {
             //List<Tuple<Airport, Airport>> DumpConnections = new List<Tuple<Airport, Airport>>();
 

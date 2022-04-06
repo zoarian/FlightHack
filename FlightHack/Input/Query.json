@@ -1,0 +1,47 @@
+{
+  "General": {
+    "NoOfAdults": 1,
+    "NoOfSeniors": 0,
+    "NoOfYouths": 0,
+    "NoOfChildren": 0,
+    "NoOfInfantsInSeat": 0,
+    "NoOfInfantsInLap": 0,
+    "Stops": "No limit",
+    "ExtraStops": "Up to 1 extra stop",
+    "Cabin": "Cheapest",
+    "Currency": "British Pound (GBP)",
+    "SalesCity": null,
+    "AllowAirportChanges": true,
+    "OnlyShowFlightsAndPricesWithAvailableSeats": true,
+    "OriginalFarePrice": 252.2
+  },
+  "SearchSpaceConstraints": {
+    "MinimumDistanceBetweenAirports": 1,
+    "MaximumDistanceBetweenAirports": 200,
+    "MinimumNoOfCarriersServicingAnAirport": 10
+  },
+  "FixedLegs": [
+    {
+      "OriginCity": "DUB",
+      "DestinationCity": "YYZ",
+      "RoutingCode": "F:WS51 F:WS273",
+      "ExtensionCode": "boo",
+      "Date": "08/26/2022",
+      "DateOption": "Departure",
+      "IsFixed": true
+    },
+    {
+      "OriginCity": "YYZ",
+      "DestinationCity": "EDI",
+      "RoutingCode": "F:WS16",
+      "ExtensionCode": "boo",
+      "Date": "06/14/2022",
+      "DateOption": "Departure",
+      "IsFixed": true
+    }
+  ],
+  "DumpLeg": {
+    "Date": "06/14/2022",
+    "DateFlexibility": "+/- 2 days"
+  }
+}

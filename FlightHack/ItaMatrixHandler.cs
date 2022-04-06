@@ -6,315 +6,461 @@ using Newtonsoft.Json;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Support.UI;
+using FlightHack.Query;
+using System.IO;
+using System.Threading.Tasks;
 
 namespace FlightHack
 {
     public class ItaMatrixHandler
     {
-        // Search Variables
-        public double OriginalFare { get; set; }
-        public int SleepTimer { get; set; } 
+        [JsonProperty("Browser")]
+        public string Browser { get; set; }
+
+        [JsonProperty("IsTakingResultScreenshots")]
+        public bool IsTakingResultScreenshots { get; set; }
+
+        [JsonProperty("IsUsingJobTimer")]
+        public bool IsUsingJobTimer { get; set; }
+
+        [JsonProperty("IsUsingQueryTimers")]
+        public bool IsUsingQueryTimers { get; set; }
+
+        [JsonProperty("JsonFileLocation")]
+        public string JsonFileLocation { get; set; }
+
+        [JsonProperty("NoOfParallelSearches")]
+        public int NoOfParallelSearches { get; set; }
+
+        [JsonProperty("SearchLimitNoResults")]
         public int SearchLimitNoResults { get; set; }
 
+        [JsonProperty("SearchLimitWithResults")]
         public int SearchLimitWithResults { get; set; }
+
+        [JsonProperty("SleepTimer")]
+        public int SleepTimer { get; set; }
+
+        [JsonProperty("WebElementTimeout")]
+        public int WebElementTimeout { get; set; }
+
+        [JsonProperty("URL")]
         public string URL { get; set; }
+
+        // This should really go into the Job Class
+        public static int LoopNo { get; set; }
 
         // Inital Search Form IDs and XPaths
         const string MultiCityTabID = "mat-tab-label-0-2";
         const string AddFlightButtonXPath = "/html/body/app-root/matrix-search-page/mat-card[1]/mat-card-content/form/matrix-select-flight-tabs/mat-tab-group/div/mat-tab-body[3]/div/matrix-multi-city-search-tab/div/div[2]/mat-chip";
         const string SearchButtonXpath = "/html/body/app-root/matrix-search-page/mat-card[1]/mat-card-content/form/div[2]/button";
-
-        const string LegOneOriginCityCodeID = "mat-chip-list-input-4";
-        const string LegOneDestinationCityCodeID = "mat-chip-list-input-5";
-        const string LegOneDepartureDateID = "mat-input-8";
-        const string LegOneRoutingCodeID = "/html/body/app-root/matrix-search-page/mat-card[1]/mat-card-content/form/matrix-select-flight-tabs/mat-tab-group/div/mat-tab-body[3]/div/matrix-multi-city-search-tab/div/div[1]/matrix-flight-picker/div/div/div[2]/div[1]/div/mat-form-field[1]/div/div[1]/div[1]/input";
-
-        const string LegTwoOriginCityCodeID = "mat-chip-list-input-6";
-        const string LegTwoDestinationCityCodeID = "mat-chip-list-input-7";
-        const string LegTwoDepartureDateID = "mat-input-10";
-        const string LegTwoRoutingCodeID = "/html/body/app-root/matrix-search-page/mat-card[1]/mat-card-content/form/matrix-select-flight-tabs/mat-tab-group/div/mat-tab-body[3]/div/matrix-multi-city-search-tab/div/div[3]/matrix-flight-picker/div/div/div[2]/div[1]/div/mat-form-field[1]/div/div[1]/div[1]/input";
-
-        const string DumpLegOriginCityCodeID = "mat-chip-list-input-8";
-        const string DumpLegDestinationCityCodeID = "mat-chip-list-input-9";
-        const string DumpLegDepartureDateID = "mat-input-11";
-
-        const string DumpLegDateFlexIDButton = "mat-select-32";
-        const string PlusMinus2days = "/html/body/div[3]/div[2]/div/div/div/mat-option[5]/span";
-
         const string AdvancedButtonID = "/html/body/app-root/matrix-search-page/mat-card[1]/mat-card-content/form/matrix-select-flight-tabs/button";
-        const string AirlineInputID1 = "mat-input-20";
-        const string AirlineInputID2 = "mat-input-23";
-        const string DumpLegRoutingID = "mat-input-25";
-
-        const string CurrencyID = "mat-input-6";
 
         // Result Page IDs and Xpaths
         const string QueryResultXPath = "/html/body/app-root/matrix-flights-page/mat-card/mat-card-content/mat-tab-group/div/mat-tab-body[1]/div/div/matrix-result-set-panel/div/div/table/tbody/tr[1]/td[1]/div/button/span[1]";
-        const string StrtNewSearchXPath = "/html/body/app-root/matrix-flights-page/mat-card/mat-card-content/mat-tab-group/div/mat-tab-body[1]/div/div/matrix-result-set-panel/div/matrix-no-flights-found/button";
         const string NoResults = "/html/body/app-root/matrix-flights-page/mat-card/mat-card-content/mat-tab-group/div/mat-tab-body[1]/div/div/matrix-result-set-panel/div/matrix-no-flights-found/div[1]";
 
-        // Input data - this will change depending on the query and the fuel dump flights
-        public string AirlineInput { get ; set; }
-        public string Currency { get; set; }
+        //
+        const string CurrencyID = "mat-input-6";
+        const string DumpLegDateFlexIDButton = "mat-select-32";
+        const string PlusMinus2days = "/html/body/div[3]/div[2]/div/div/div/mat-option[5]/span";
 
-        // 1st Leg Human Details
-        public string LegOneOriginCityCode { get; set; }
-        public string LegOneDestinationCityCode { get; set; }
-        public string LegOneDepartureDate { get; set; }
+        // Add this to the query input
+        public double OriginalFare { get; set; }
 
-        // 2nd Leg Human Details
-        public string LegTwoOriginCityCode { get; set; }
-        public string LegTwoDestinationCityCode { get; set; }
-        public string LegTwoDepartureDate { get; set; }
+        public ItaMatrixHandler() { }
 
-        public string LegOneRoutingCode { get; set; }
-        public string LegTwoRoutingCode { get; set; }
-        public string DumpLegRouting { get; set; }
-
-        public ItaMatrixHandler(int SleepTimer, int MaxSearchTimeLimit, int SearchLimitWithResults, string URL, double OriginalFare, string DumpLegRouting, string LegOneRoutingCode, string LegTwoRoutingCode)
+        public ItaMatrixHandler(string FilePath)
         {
-            this.SleepTimer = SleepTimer;
-            this.SearchLimitNoResults = MaxSearchTimeLimit;
-            this.SearchLimitWithResults = SearchLimitWithResults;
-            this.URL = URL;
-            this.OriginalFare = OriginalFare;
-            this.DumpLegRouting = DumpLegRouting;
-            this.LegOneRoutingCode = LegOneRoutingCode;
-            this.LegTwoRoutingCode = LegTwoRoutingCode; 
+            StreamReader r = new StreamReader(FilePath);
+            ItaMatrixHandler temp = JsonConvert.DeserializeObject<ItaMatrixHandler>(r.ReadToEnd());
 
-            AirlineInput = "AIRLINES AT";
-            Currency = "British Pound (GBP)";
-
-            LegOneOriginCityCode = "DUB;";
-            LegOneDestinationCityCode = "YYZ;";
-            LegOneDepartureDate = "05/16/2022";
-
-            // This is not necessarily true
-            LegTwoOriginCityCode = LegOneDestinationCityCode;
-            LegTwoDestinationCityCode = "EDI";
-            LegTwoDepartureDate = "06/14/2022";
+            // Assign general properties
+            this.Browser = temp.Browser;
+            this.IsTakingResultScreenshots = temp.IsTakingResultScreenshots;
+            this.IsUsingJobTimer = temp.IsUsingJobTimer;
+            this.IsUsingQueryTimers = temp.IsUsingQueryTimers;
+            this.JsonFileLocation = temp.JsonFileLocation;
+            this.NoOfParallelSearches = temp.NoOfParallelSearches;
+            this.SearchLimitNoResults = temp.SearchLimitNoResults;
+            this.SearchLimitWithResults = temp.SearchLimitWithResults;
+            this.SleepTimer = temp.SleepTimer;
+            this.WebElementTimeout = temp.WebElementTimeout;
+            this.URL = temp.URL;
         }
 
-        public void IssueAQueryAsync(Airport Airport1, Airport Airport2, string DumpLegDepartureDate, double OriginalFare, List<QueryResult> Results)
+        public async Task<int> StartJobAsync(Input Input, List<Result> Results, string AirortFileLocation)
         {
-            string QueryMessage;
-            string QueryTime;
-            double DistanceBetweenDumpAirports = Airport.DistanceBetweenAirports(Airport1, Airport2);
-            double NewFare = 0;
-            string DumpLegOriginCityCode = Airport1.Code;
-            string DumpLegDestinationCityCode = Airport2.Code;
+            List<Task> allTasks = new List<Task>();
+            List<Tuple<Airport, Airport>> AllDumpLegs = Airport.GetAllDumpConnections(AirortFileLocation, Input.Airport.MinNoCarriers, Input.Airport.MinDist, Input.Airport.MaxDist);
+            List<Input> InputList = new List<Input>();
+
+            Console.WriteLine("# Queries In Parallel: " + NoOfParallelSearches);
+
+            var throttler = new SemaphoreSlim(initialCount: NoOfParallelSearches);
+
+            var watch = Stopwatch.StartNew();
+
+            LoopNo = 0;
+
+            foreach (var DumpLeg in AllDumpLegs)
+            {
+                await throttler.WaitAsync();
+
+                allTasks.Add(
+                    Task.Run(() =>
+                    {
+                        try
+                        {
+                            Console.WriteLine("[" + Task.CurrentId.ToString() + "]   " + DumpLeg.Item1.Code + " -> " + DumpLeg.Item2.Code + "(" + LoopNo + "/" + AllDumpLegs.Count + ")");
+                            IssueQueryAsync(DumpLeg, Input, Results);
+                            Thread.Sleep(30);
+                        }
+                        finally
+                        {
+                            throttler.Release();
+                        }
+                    }));
+            }
+
+
+            // Do the reverse search here
+            List<Tuple<Airport, Airport>> ReverseDumpLegs = new List<Tuple<Airport, Airport>>();
+
+            foreach (var DumpLeg in AllDumpLegs)
+            {
+                ReverseDumpLegs.Add(new Tuple<Airport, Airport>(DumpLeg.Item2, DumpLeg.Item1));
+            }
+
+
+            watch.Stop();
+
+            KillChromeDrivers();
+
+            return (int)watch.Elapsed.TotalSeconds;
+        }
+
+        public void KillChromeDrivers()
+        {
+            Process process = new Process();
+            ProcessStartInfo startInfo = new ProcessStartInfo();
+            startInfo.WindowStyle = ProcessWindowStyle.Hidden;
+            startInfo.FileName = "cmd.exe";
+            startInfo.Arguments = "taskkill /F /IM chromedriver.exe /T";
+            process.StartInfo = startInfo;
+            process.Start();
+        }
+
+        public void IssueQueryAsync(Tuple<Airport, Airport> DumpConnection, Input Input, List<Result> Results)
+        {
+            // Add DumpLeg data to our input
+            //Input.DumpLeg.OriginCity = DumpConnection.Item1.Code;
+            //Input.DumpLeg.DestinationCity = DumpConnection.Item2.Code;
+            Input.DumpLeg.RoutingCode = "N";
+
+            Console.WriteLine("[" + Task.CurrentId.ToString() + "]   " + "Doing Dump Leg Connection: " + DumpConnection.Item1.Code + " -> " + DumpConnection.Item2.Code + "(" + LoopNo + ")");
+            LoopNo++;
+
+            Result CurrentSearch = new Result();
+            CurrentSearch.DistanceBetweenDumpAirports = Airport.DistanceBetweenAirports(DumpConnection.Item1, DumpConnection.Item2);
+            CurrentSearch.NewFare = 0;
+            CurrentSearch.TimeStamp = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            CurrentSearch.SumOfCarriers = (Int32.Parse(DumpConnection.Item1.Carriers) + Int32.Parse(DumpConnection.Item2.Carriers)).ToString();
+            CurrentSearch.DumpLegOriginCode = DumpConnection.Item1.Code;
+            CurrentSearch.DumpLegDestCode = DumpConnection.Item2.Code;
 
             var QueryTimer = Stopwatch.StartNew();
-            int LoadingTimeout = SleepTimer * 20;
 
             try
             {
-                Console.WriteLine("Doing Dump Leg Connection: " + Airport1.Code + " -> " + Airport2.Code);
-
-                ChromeOptions   options = new ChromeOptions();
-                                options.AddArgument("log-level=3");
-                                options.AddArgument("silent");
-                                options.AddArgument("no-sandbox");
-                                options.AddArgument("ignore-certificate-errors");
-                                options.AddArgument("ignore-ssl-errors");
-                                options.AddArgument("headless");
-                                options.AddArgument("disable-extensions");
-                                options.AddArgument("test-type");
-                                options.AddArgument("excludeSwitches");
+                ChromeOptions options = new ChromeOptions();
+                options.AddArgument("log-level=3");
+                options.AddArgument("silent");
+                options.AddArgument("no-sandbox");
+                options.AddArgument("ignore-certificate-errors");
+                options.AddArgument("ignore-ssl-errors");
+                options.AddArgument("headless");
+                options.AddArgument("disable-extensions");
+                options.AddArgument("test-type");
+                options.AddArgument("excludeSwitches");
+                options.AddArgument("start-maximized");
+                options.AddArgument("disable-infobars");
+                options.AddArgument("--disable-extensions");
+                options.AddArgument("--no-sandbox");
+                options.AddArgument("--disable-application-cache");
+                options.AddArgument("--disable-gpu");
+                options.AddArgument("--disable-dev-shm-usage");
 
                 ChromeDriverService service = ChromeDriverService.CreateDefaultService();
-                                    service.SuppressInitialDiagnosticInformation = true;
-                                    service.HideCommandPromptWindow = true;
+                service.SuppressInitialDiagnosticInformation = true;
+                service.HideCommandPromptWindow = true;
 
-                Console.WriteLine("Started Chrome Driver");
+                IWebDriver Driver = new ChromeDriver(service, options, TimeSpan.FromMinutes(3));
+                Driver.Url = URL;
 
-                Thread.Sleep(SleepTimer * 10);
+                WebDriverWait w = new WebDriverWait(Driver, TimeSpan.FromMilliseconds(WebElementTimeout));
+                w.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.Id(MultiCityTabID)));
 
-                IWebDriver  driver = new ChromeDriver(service, options);
-                            driver.Url = URL;
-
-                WebDriverWait w = new WebDriverWait(driver, TimeSpan.FromMilliseconds(LoadingTimeout));
-                              w.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.Id(MultiCityTabID)));
-                IWebElement EMultiButton = driver.FindElement(By.Id(MultiCityTabID));
+                IWebElement EMultiButton = Driver.FindElement(By.Id(MultiCityTabID));
                 EMultiButton.Click();
 
-                Console.WriteLine("Changed Tabs");
+                IWebElement EAddFlights = Driver.FindElement(By.XPath(AddFlightButtonXPath));
+                for (int i = 0; i < Input.FixedLegs.Count; i++) { EAddFlights.Click(); }
 
-                IWebElement EAddFlights = driver.FindElement(By.XPath(AddFlightButtonXPath));
-                EAddFlights.Click();
-                EAddFlights.Click();
+                Thread.Sleep(SleepTimer); // Might not be needed
 
-                Console.WriteLine("Added Flight Fields");
-                Thread.Sleep(SleepTimer);
-
-                IWebElement ELeg1CityCode = driver.FindElement(By.Id(LegOneOriginCityCodeID));
-                ELeg1CityCode.SendKeys(LegOneOriginCityCode);
-                ELeg1CityCode.SendKeys(Keys.Tab);
-
-                IWebElement ELeg1DepCode = driver.FindElement(By.Id(LegOneDestinationCityCodeID));
-                ELeg1DepCode.SendKeys(LegOneDestinationCityCode);
-                ELeg1DepCode.SendKeys(Keys.Tab);
-
-                IWebElement ELeg1DepartureDate = driver.FindElement(By.Id(LegOneDepartureDateID));
-                ELeg1DepartureDate.SendKeys(LegOneDepartureDate);
-                ELeg1DepartureDate.SendKeys(Keys.Tab);
-
-                Console.WriteLine("Populated First Leg");
-                Thread.Sleep(SleepTimer);
-
-                IWebElement ELeg2CityCode = driver.FindElement(By.Id(LegTwoOriginCityCodeID));
-                ELeg2CityCode.SendKeys(LegTwoOriginCityCode);
-                ELeg2CityCode.SendKeys(Keys.Tab);
-
-                IWebElement ELeg2DepCode = driver.FindElement(By.Id(LegTwoDestinationCityCodeID));
-                ELeg2DepCode.SendKeys(LegTwoDestinationCityCode);
-                ELeg2DepCode.SendKeys(Keys.Tab);
-
-                IWebElement ELeg2DepartureDate = driver.FindElement(By.Id(LegTwoDepartureDateID));
-                ELeg2DepartureDate.SendKeys(LegTwoDepartureDate);
-                ELeg2DepartureDate.SendKeys(Keys.Tab);
-
-                Console.WriteLine("Populated Second Leg");
-                Thread.Sleep(SleepTimer);
-
-                IWebElement EDumpOriginCityCode = driver.FindElement(By.Id(DumpLegOriginCityCodeID));
-                EDumpOriginCityCode.SendKeys(DumpLegOriginCityCode);
-                EDumpOriginCityCode.SendKeys(Keys.Tab);
-
-                IWebElement EDumpDepCode = driver.FindElement(By.Id(DumpLegDestinationCityCodeID));
-                EDumpDepCode.SendKeys(DumpLegDestinationCityCode);
-                EDumpDepCode.SendKeys(Keys.Tab);
-
-                IWebElement EDumpDepartureDate = driver.FindElement(By.Id(DumpLegDepartureDateID));
-                EDumpDepartureDate.SendKeys(DumpLegDepartureDate);
-                EDumpDepartureDate.SendKeys(Keys.Tab);
-
-                Console.WriteLine("Populated Dump Leg");
-                Thread.Sleep(SleepTimer);
-
-                IWebElement EAdvancedSearchButton = driver.FindElement(By.XPath(AdvancedButtonID));
+                IWebElement EAdvancedSearchButton = Driver.FindElement(By.XPath(AdvancedButtonID));
                 EAdvancedSearchButton.Click();
 
-                if(false)
-                {
-                    w = new WebDriverWait(driver, TimeSpan.FromMilliseconds(LoadingTimeout));
-                    w.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.Id(AirlineInputID1)));
+                Thread.Sleep(SleepTimer); // Might not be needed
 
-                    IWebElement EAirlingInput1 = driver.FindElement(By.Id(AirlineInputID1));
-                    EAirlingInput1.SendKeys(AirlineInput);
-                    EAirlingInput1.SendKeys(Keys.Tab);
-
-                    IWebElement EAirlingInput2 = driver.FindElement(By.Id(AirlineInputID2));
-                    EAirlingInput2.SendKeys(AirlineInput);
-                    EAirlingInput2.SendKeys(Keys.Tab);
-                }
-                else
-                {
-                    w = new WebDriverWait(driver, TimeSpan.FromMilliseconds(LoadingTimeout));
-                    w.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath(LegOneRoutingCodeID)));
-
-                    IWebElement ELegOneRoutineCode = driver.FindElement(By.XPath(LegOneRoutingCodeID));
-                    ELegOneRoutineCode.SendKeys(LegOneRoutingCode);
-                    ELegOneRoutineCode.SendKeys(Keys.Tab);
-
-                    IWebElement ELegTwoRoutineCode = driver.FindElement(By.XPath(LegTwoRoutingCodeID));
-                    ELegTwoRoutineCode.SendKeys(LegTwoRoutingCode);
-                    ELegTwoRoutineCode.SendKeys(Keys.Tab);
-                }
-
-                IWebElement EDumpRoutingID = driver.FindElement(By.Id(DumpLegRoutingID));
-                EDumpRoutingID.SendKeys(DumpLegRouting);
-                EDumpRoutingID.SendKeys(Keys.Tab);
+                PupulateLegs(Driver, Input, DumpConnection);
 
                 Thread.Sleep(SleepTimer);
 
-                // Add Dump Leg Flexibility
-                Console.WriteLine("Adding Other Settings (Flex Date, Currency, etc)");
-                Thread.Sleep(SleepTimer);
-
-                IWebElement EFlexIDButton = driver.FindElement(By.Id(DumpLegDateFlexIDButton));
-                EFlexIDButton.Click();
-
-                Thread.Sleep(SleepTimer);
-
-                w = new WebDriverWait(driver, TimeSpan.FromMilliseconds(LoadingTimeout));
-                w.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath(PlusMinus2days)));
-                IWebElement EDumpDateFlex = driver.FindElement(By.XPath(PlusMinus2days));
-                EDumpDateFlex.Click();
-
-                IWebElement ECurrencyInput = driver.FindElement(By.Id(CurrencyID));
-                ECurrencyInput.SendKeys(Currency);
+                IWebElement ECurrencyInput = Driver.FindElement(By.Id(CurrencyID));
+                ECurrencyInput.SendKeys(Input.General.Currency);
                 ECurrencyInput.SendKeys(Keys.Enter);
 
-
-
-                IWebElement EFinalSearchButton = driver.FindElement(By.XPath(SearchButtonXpath));
+                IWebElement EFinalSearchButton = Driver.FindElement(By.XPath(SearchButtonXpath));
                 EFinalSearchButton.Click();
 
-                Console.WriteLine("Searching For Flights...");
+                //Console.WriteLine("Searching For Flights...");
 
                 // TODO: Change this so we check if either NoResults or QueryResults are returned - asynch maybe?
                 try
                 {
-                    w = new WebDriverWait(driver, TimeSpan.FromSeconds(SearchLimitNoResults));
+                    w = new WebDriverWait(Driver, TimeSpan.FromSeconds(SearchLimitNoResults));
                     w.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath(NoResults)));
 
-                    Console.WriteLine("No flights match the criteria");
-                    QueryMessage = "No flights match the criteria";
+                    Console.WriteLine("[" + Task.CurrentId.ToString() + "]   " + "No flights match the criteria");
+                    CurrentSearch.QueryMessage = "No flights match the criteria";
                 }
                 catch (Exception ex)
                 {
                     try
                     {
-                        Console.WriteLine("Error: " + ex.Message);
-                        Console.WriteLine("We've not found a new search button - searching for prices now");
-                        
-                        w = new WebDriverWait(driver, TimeSpan.FromSeconds(SearchLimitWithResults));
+                        Console.WriteLine("[" + Task.CurrentId.ToString() + "]   " + "Error: " + ex.Message);
+                        Console.WriteLine("[" + Task.CurrentId.ToString() + "]   " + "We've not found a new search button - searching for prices now");
+
+                        w = new WebDriverWait(Driver, TimeSpan.FromSeconds(SearchLimitWithResults));
                         w.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath(QueryResultXPath)));
 
-                        IWebElement ENewPrice = driver.FindElement(By.XPath(QueryResultXPath));
+                        IWebElement ENewPrice = Driver.FindElement(By.XPath(QueryResultXPath));
 
-                        double.TryParse(ENewPrice.Text.Trim('£'), out NewFare);
+                        CurrentSearch.NewFare = double.Parse(ENewPrice.Text.Trim('£'));
 
-                        Console.WriteLine("Price with dump leg: " + DumpLegOriginCityCode + "->" + DumpLegDestinationCityCode + " is: " + ENewPrice.Text);
+                        Console.WriteLine("[" + Task.CurrentId.ToString() + "]   " + "Price with dump leg: " + DumpConnection.Item1.Code + "->" + DumpConnection.Item2.Code + " is: " + ENewPrice.Text);
 
-                        if (NewFare < OriginalFare)
-                            Console.WriteLine("We've got a cheaper fare: " + NewFare);
+                        if (CurrentSearch.NewFare < OriginalFare)
+                            Console.WriteLine("[" + Task.CurrentId.ToString() + "]   " + "We've got a cheaper fare: " + CurrentSearch.NewFare);
                         else
-                            Console.WriteLine("No Luck: " + NewFare);
+                            Console.WriteLine("[" + Task.CurrentId.ToString() + "]   " + "No Luck: " + CurrentSearch.NewFare);
 
-                        QueryMessage = "We've not found a new search button - searching for prices now";
-
+                        CurrentSearch.QueryMessage = "We've not found a new search button - searching for prices now";
                     }
                     catch (Exception e)
                     {
-                        Console.WriteLine("Error: " + e.Message);
-                        QueryMessage = e.Message;
+                        Console.WriteLine("[" + Task.CurrentId.ToString() + "]   " + "Error: " + e.Message);
+
+                        try
+                        {
+                            w = new WebDriverWait(Driver, TimeSpan.FromSeconds(SearchLimitNoResults));
+                            w.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath(NoResults)));
+
+                            Console.WriteLine("[" + Task.CurrentId.ToString() + "]   " + "No flights match the criteria");
+                            CurrentSearch.QueryMessage = "No flights match the criteria";
+                        }
+                        catch (Exception exc)
+                        {
+                            Console.WriteLine("[" + Task.CurrentId.ToString() + "]   " + "Error: " + exc.Message);
+                            CurrentSearch.QueryMessage = exc.Message;
+                        }
                     }
                 }
 
-                driver.Quit();
-
-           }
-            catch(Exception e)
-            {
-                Console.WriteLine("Exception in Overall Query: " + e.Message);
-                QueryMessage = e.Message;
-                NewFare = -1;
+                Driver.Quit();
             }
+            catch (Exception e)
+            {
+                Console.WriteLine("[" + Task.CurrentId.ToString() + "]   " + "Exception in Overall Query: " + e.Message);
+                CurrentSearch.QueryMessage = e.Message;
+                CurrentSearch.NewFare = -1;
+            }
+            finally
+            {
+                //Driver.Quit();
+            }
+
+            Thread.Sleep(100);
 
             QueryTimer.Stop();
             TimeSpan elapsed = QueryTimer.Elapsed;
-            QueryTime = elapsed.ToString(@"m\:ss");
+            CurrentSearch.QueryTime = ((int)elapsed.TotalSeconds).ToString();
 
-            Results.Add(new QueryResult(QueryTime, NewFare, DistanceBetweenDumpAirports, DumpLegOriginCityCode, DumpLegDestinationCityCode, DumpLegDepartureDate, DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"), QueryMessage, (Int32.Parse(Airport1.Carriers) + Int32.Parse(Airport2.Carriers))));
+            Results.Add(CurrentSearch);
+        }
 
+        public void PupulateLegs(IWebDriver Driver, Input Input, Tuple<Airport, Airport> DumpConnection)
+        {
+            //Console.WriteLine("Populating Legs With Flight Data");
+
+            IWebElement WebEl;
+
+            for (int LegNo = 0; LegNo < Input.FixedLegs.Count; LegNo++)
+            {
+                //Console.WriteLine("Fixed Leg: " + LegNo);
+
+                LegIDs Leg = new LegIDs(LegNo);
+
+                WebEl = Driver.FindElement(By.Id(Leg.OriginCityID));
+                WebEl.SendKeys(Input.FixedLegs[LegNo].OriginCity);
+                WebEl.SendKeys(Keys.Tab);
+
+                WebEl = Driver.FindElement(By.Id(Leg.DestinationCityID));
+                WebEl.SendKeys(Input.FixedLegs[LegNo].DestinationCity);
+                WebEl.SendKeys(Keys.Tab);
+
+                //Console.WriteLine(Input.FixedLegs[LegNo].Date);
+
+                WebEl = Driver.FindElement(By.Id(Leg.DateID));
+                WebEl.SendKeys(Input.FixedLegs[LegNo].Date);
+                WebEl.SendKeys(Keys.Tab);
+
+                if (!String.IsNullOrEmpty(Input.FixedLegs[LegNo].RoutingCode))
+                {
+                    WebEl = Driver.FindElement(By.Id(Leg.RoutingCodeID));
+                    WebEl.SendKeys(Input.FixedLegs[LegNo].RoutingCode);
+                    WebEl.SendKeys(Keys.Tab);
+                }
+
+                if (!String.IsNullOrEmpty(Input.FixedLegs[LegNo].ExtensionCode))
+                {
+                    WebEl = Driver.FindElement(By.Id(Leg.ExtensionCodeID));
+                    WebEl.SendKeys(Input.FixedLegs[LegNo].ExtensionCode);
+                    WebEl.SendKeys(Keys.Tab);
+                }
+
+                if (!String.IsNullOrEmpty(Input.FixedLegs[LegNo].DateOption) && Input.FixedLegs[LegNo].DateOption != "Departure")
+                {
+                    WebEl = Driver.FindElement(By.Id(Leg.DateOptionID));
+                    WebEl.SendKeys(Input.FixedLegs[LegNo].DateOption);
+                    WebEl.SendKeys(Keys.Tab);
+                }
+
+                if (!String.IsNullOrEmpty(Input.FixedLegs[LegNo].DateFlexibility) && Input.FixedLegs[LegNo].DateFlexibility != "This day only")
+                {
+                    WebEl = Driver.FindElement(By.Id(Leg.DateFlexibilityID));
+                    WebEl.SendKeys(Input.FixedLegs[LegNo].DateFlexibility);
+                    WebEl.SendKeys(Keys.Tab);
+                }
+            }
+
+            int LegN = Input.FixedLegs.Count;
+
+            //Console.WriteLine("Populating Dump Leg Now");
+
+            LegIDs DLeg = new LegIDs(LegN);
+
+            WebEl = Driver.FindElement(By.Id(DLeg.OriginCityID));
+            WebEl.SendKeys(DumpConnection.Item1.Code);
+            WebEl.SendKeys(Keys.Tab);
+
+            WebEl = Driver.FindElement(By.Id(DLeg.DestinationCityID));
+            WebEl.SendKeys(DumpConnection.Item2.Code);
+            WebEl.SendKeys(Keys.Tab);
+
+            WebEl = Driver.FindElement(By.Id(DLeg.DateID));
+            WebEl.SendKeys(Input.DumpLeg.Date);
+            WebEl.SendKeys(Keys.Tab);
+
+            if (!String.IsNullOrEmpty(Input.DumpLeg.RoutingCode))
+            {
+                WebEl = Driver.FindElement(By.Id(DLeg.RoutingCodeID));
+                WebEl.SendKeys(Input.DumpLeg.RoutingCode);
+                WebEl.SendKeys(Keys.Tab);
+            }
+
+            if (!String.IsNullOrEmpty(Input.DumpLeg.ExtensionCode))
+            {
+                WebEl = Driver.FindElement(By.Id(DLeg.ExtensionCodeID));
+                WebEl.SendKeys(Input.DumpLeg.ExtensionCode);
+                WebEl.SendKeys(Keys.Tab);
+            }
+
+            if (!String.IsNullOrEmpty(Input.DumpLeg.DateOption) && Input.DumpLeg.DateOption != "Departure")
+            {
+                WebEl = Driver.FindElement(By.Id(DLeg.DateOptionID));
+                WebEl.SendKeys(Input.DumpLeg.DateOption);
+                WebEl.SendKeys(Keys.Tab);
+            }
+
+            if (!String.IsNullOrEmpty(Input.DumpLeg.DateFlexibility) && Input.DumpLeg.DateFlexibility != "This day only")
+            {
+                // TODO: Fix this so it's actually dynamic and flexible
+                IWebElement EFlexIDButton = Driver.FindElement(By.Id(DumpLegDateFlexIDButton));
+                EFlexIDButton.Click();
+
+                Thread.Sleep(SleepTimer);
+
+                WebDriverWait w = new WebDriverWait(Driver, TimeSpan.FromMilliseconds(WebElementTimeout));
+                w.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath(PlusMinus2days)));
+                IWebElement EDumpDateFlex = Driver.FindElement(By.XPath(PlusMinus2days));
+                EDumpDateFlex.Click();
+
+                /*                WebEl = Driver.FindElement(By.Id(DLeg.DateFlexibilityID));
+                                WebEl.SendKeys(Input.DumpLeg.DateFlexibility);
+                                WebEl.SendKeys(Keys.Tab);*/
+            }
         }
     }
 
-    public class ItaWebElement
+    public class LegIDs
     {
-        [JsonProperty("code")]
-        public string Name { get; set; }
+        public string OriginCityID { get; set; }
+        public string DestinationCityID { get; set; }
+        public string RoutingCodeID { get; set; }
+        public string ExtensionCodeID { get; set; }
+        public string DateID { get; set; }
+        public string DateOptionID { get; set; }
+        public string DateFlexibilityID { get; set; }
+
+        private int OInit = 4;
+        private int RInit = 22;
+        private int DInit = 27;
+
+        public LegIDs()
+        {
+            OriginCityID = "mat-chip-list-input-";
+            DestinationCityID = "mat-chip-list-input-";
+            RoutingCodeID = "mat-input-";
+            ExtensionCodeID = "mat-input-";
+            DateID = "mat-input-";
+            DateOptionID = "mat-select-value-";
+            DateFlexibilityID = "mat-select-value-";
+        }
+
+        public LegIDs(int LegNo)
+        {
+            OriginCityID = "mat-chip-list-input-" + (LegNo * 2 + OInit);
+            DestinationCityID = "mat-chip-list-input-" + (LegNo * 2 + OInit + 1);
+
+            if (LegNo == 0)
+            {
+                RoutingCodeID = "mat-input-19";
+                ExtensionCodeID = "mat-input-20";
+                DateID = "mat-input-21";
+                DateOptionID = "mat-select-value-23";
+                DateFlexibilityID = "mat-select-value-25";
+            }
+            else
+            {
+                RoutingCodeID = "mat-input-" + ((LegNo - 1) * 3 + RInit); // 22
+                ExtensionCodeID = "mat-input-" + ((LegNo - 1) * 3 + RInit + 1); //23
+                DateID = "mat-input-" + ((LegNo - 1) * 3 + RInit + 2); //24
+                DateOptionID = "mat-select-value-" + ((LegNo - 1) * 4 + DInit); //27
+                DateFlexibilityID = "mat-select-value-" + ((LegNo - 1) * 4 + DInit + 1); //28
+            }
+        }
     }
 }

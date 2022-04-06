@@ -1,0 +1,35 @@
+Flight Leg 1 Element ID:
+	Origin: mat-chip-list-input-4
+	Desination: mat-chip-list-input-5
+	Routing: mat-input-14
+	Extension: mat-input-15
+	Date: mat-input-16
+	DepartureOptions: mat-select-value-11
+	DepartureFlexibility: mat-select-value-13
+
+Flight Leg 2 Element ID:
+	Origin: mat-chip-list-input-6
+	Desination: mat-chip-list-input-7
+	Routing: mat-input-18
+	Extension: mat-input-19
+	Date: mat-input-20
+	DepartureOptions: mat-select-value-27
+	DepartureFlexibility: mat-select-value-29
+
+Flight Leg 3 Element ID:
+	Origin: mat-chip-list-input-8
+	Desination: mat-chip-list-input-9
+	Routing: mat-input-21
+	Extension: mat-input-22
+	Date: mat-input-23
+	DepartureOptions: mat-select-value-31
+	DepartureFlexibility: mat-select-value-33
+
+Flight Leg 4 Element ID:
+	Origin: mat-chip-list-input-10
+	Desination: mat-chip-list-input-11
+	Routing: mat-input-24
+	Extension: mat-input-25
+	Date: mat-input-26
+	DepartureOptions: mat-select-value-35
+	DepartureFlexibility: mat-select-value-37

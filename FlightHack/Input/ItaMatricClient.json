@@ -1,0 +1,13 @@
+{
+  "Browser": "Chrome",
+  "IsTakingResultScreenshots": false,
+  "IsUsingJobTimer": true,
+  "IsUsingQueryTimers": true,
+  "JsonFileLocation": "C:\\Users\\MP\\Documents\\FlightHack\\Input\\in.json",
+  "NoOfParallelSearches": 7,
+  "SearchLimitNoResults": 70,
+  "SearchLimitWithResults": 30,
+  "SleepTimer": 10,
+  "WebElementTimeout": 100,
+  "URL": "https://matrix.itasoftware.com/search"
+}
