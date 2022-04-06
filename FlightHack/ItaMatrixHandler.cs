@@ -123,7 +123,6 @@ namespace FlightHack
                     }));
             }
 
-
             // Do the reverse search here
             List<Tuple<Airport, Airport>> ReverseDumpLegs = new List<Tuple<Airport, Airport>>();
 

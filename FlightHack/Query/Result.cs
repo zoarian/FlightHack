@@ -48,7 +48,7 @@ namespace FlightHack.Query
         public static string SaveResultsToFile(string FilePath, List<Result> Results)
         {
             string ResultsFileBaseName = "_Results.csv";
-            string ResultsFileFullPath = @"C:\Users\MP\Documents\FlightHack\Output\" + DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss") + ResultsFileBaseName;
+            string ResultsFileFullPath = @"C:\FlightHack\Output\" + DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss") + ResultsFileBaseName;
 
             // Create the file, or overwrite if the file exists.
             using (FileStream fs = File.Create(ResultsFileFullPath))
