@@ -47,6 +47,9 @@ namespace FlightHack
         [JsonProperty("URL")]
         public string URL { get; set; }
 
+        // This should really go into the Job Class
+        public static int LoopNo { get; set; }
+
         // Inital Search Form IDs and XPaths
         const string MultiCityTabID = "mat-tab-label-0-2";
         const string AddFlightButtonXPath = "/html/body/app-root/matrix-search-page/mat-card[1]/mat-card-content/form/matrix-select-flight-tabs/mat-tab-group/div/mat-tab-body[3]/div/matrix-multi-city-search-tab/div/div[2]/mat-chip";
@@ -98,7 +101,7 @@ namespace FlightHack
 
             var watch = Stopwatch.StartNew();
 
-            int IssuedQueries = 0;
+            LoopNo = 0;
 
             foreach (var DumpLeg in AllDumpLegs)
             {
@@ -109,9 +112,9 @@ namespace FlightHack
                     {
                         try
                         {
-                            Console.WriteLine("[" + Task.CurrentId.ToString() + "]   " + DumpLeg.Item1.Code + " -> " + DumpLeg.Item2.Code + " QueryNo: " + IssuedQueries);
-                            IssueQueryAsync(DumpLeg, Input, Results, IssuedQueries);
-                            Thread.Sleep(10);
+                            Console.WriteLine("[" + Task.CurrentId.ToString() + "]   " + DumpLeg.Item1.Code + " -> " + DumpLeg.Item2.Code + "(" + LoopNo + "/" + AllDumpLegs.Count + ")");
+                            IssueQueryAsync(DumpLeg, Input, Results);
+                            Thread.Sleep(30);
                         }
                         finally
                         {
@@ -119,6 +122,16 @@ namespace FlightHack
                         }
                     }));
             }
+
+
+            // Do the reverse search here
+            List<Tuple<Airport, Airport>> ReverseDumpLegs = new List<Tuple<Airport, Airport>>();
+
+            foreach (var DumpLeg in AllDumpLegs)
+            {
+                ReverseDumpLegs.Add(new Tuple<Airport, Airport>(DumpLeg.Item2, DumpLeg.Item1));
+            }
+
 
             watch.Stop();
 
@@ -138,14 +151,15 @@ namespace FlightHack
             process.Start();
         }
 
-        public void IssueQueryAsync(Tuple<Airport, Airport> DumpConnection, Input Input, List<Result> Results, int IssuedQueries)
+        public void IssueQueryAsync(Tuple<Airport, Airport> DumpConnection, Input Input, List<Result> Results)
         {
             // Add DumpLeg data to our input
             //Input.DumpLeg.OriginCity = DumpConnection.Item1.Code;
             //Input.DumpLeg.DestinationCity = DumpConnection.Item2.Code;
             Input.DumpLeg.RoutingCode = "N";
 
-            Console.WriteLine("[" + Task.CurrentId.ToString() + "]   " + "Doing Dump Leg Connection: " + DumpConnection.Item1.Code + " -> " + DumpConnection.Item2.Code + " QueryNo: " + IssuedQueries++);
+            Console.WriteLine("[" + Task.CurrentId.ToString() + "]   " + "Doing Dump Leg Connection: " + DumpConnection.Item1.Code + " -> " + DumpConnection.Item2.Code + "(" + LoopNo + ")");
+            LoopNo++;
 
             Result CurrentSearch = new Result();
             CurrentSearch.DistanceBetweenDumpAirports = Airport.DistanceBetweenAirports(DumpConnection.Item1, DumpConnection.Item2);
