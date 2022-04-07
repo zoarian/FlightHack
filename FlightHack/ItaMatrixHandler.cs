@@ -98,67 +98,79 @@ namespace FlightHack
             List<Tuple<Airport, Airport>> AllDumpLegs = Airport.GetAllDumpConnections(AirortFileLocation, Input.Airport.MinNoCarriers, Input.Airport.MinDist, Input.Airport.MaxDist);
             List<Input> InputList = new List<Input>();
 
-            var watch = Stopwatch.StartNew();
+            int JobTimeTaken = 0;
+            
             LoopNo = 0;
 
-            if (AllDumpLegs.Count == 1)
+            if(AllDumpLegs.Count < 1)
             {
-                log.InfoFormat("{0}/{1} : dump leg connection {2} -> {3}", ++LoopNo, AllDumpLegs.Count, AllDumpLegs[0].Item1.Code, AllDumpLegs[0].Item2.Code);
-
-                IssueQueryAsync(AllDumpLegs[0], Input, Results);
-            } 
+                log.InfoFormat("No dump legs found, aborting the job");
+            }
             else 
             {
-                if (AllDumpLegs.Count < NoOfParallelSearches)
-                {
-                    NoOfParallelSearches = AllDumpLegs.Count;
+                var watch = Stopwatch.StartNew();
 
-                    log.InfoFormat("Running {0} queries in parallel, lowered to the number of dump legs found", NoOfParallelSearches);
+                if (AllDumpLegs.Count == 1)
+                {
+                    log.InfoFormat("{0}/{1} : dump leg connection {2} -> {3}", ++LoopNo, AllDumpLegs.Count, AllDumpLegs[0].Item1.Code, AllDumpLegs[0].Item2.Code);
+
+                    IssueQueryAsync(AllDumpLegs[0], Input, Results);
                 }
                 else
                 {
-                    log.InfoFormat("Running {0} queries in parallel", NoOfParallelSearches);
-                }
+                    
 
-                var throttler = new SemaphoreSlim(initialCount: NoOfParallelSearches);
+                    if (AllDumpLegs.Count < NoOfParallelSearches)
+                    {
+                        NoOfParallelSearches = AllDumpLegs.Count;
 
-                foreach (var DumpLeg in AllDumpLegs)
-                {
-                    await throttler.WaitAsync();
+                        log.InfoFormat("Running {0} queries in parallel, lowered to the number of dump legs found", NoOfParallelSearches);
+                    }
+                    else
+                    {
+                        log.InfoFormat("Running {0} queries in parallel", NoOfParallelSearches);
+                    }
 
-                    allTasks.Add(
-                        Task.Run(() =>
-                        {
-                            try
+                    var throttler = new SemaphoreSlim(initialCount: NoOfParallelSearches);
+
+                    foreach (var DumpLeg in AllDumpLegs)
+                    {
+                        await throttler.WaitAsync();
+
+                        allTasks.Add(
+                            Task.Run(() =>
                             {
-                                log.InfoFormat("{0}/{1} : dump leg connection {2} -> {3}", LoopNo, AllDumpLegs.Count, DumpLeg.Item1.Code, DumpLeg.Item2.Code);
+                                try
+                                {
+                                    log.InfoFormat("{0}/{1} : dump leg connection {2} -> {3}", LoopNo, AllDumpLegs.Count, DumpLeg.Item1.Code, DumpLeg.Item2.Code);
 
-                                IssueQueryAsync(DumpLeg, Input, Results);
-                                Thread.Sleep(30);
-                            }
-                            finally
-                            {
-                                throttler.Release();
-                            }
-                        }));
+                                    IssueQueryAsync(DumpLeg, Input, Results);
+                                    Thread.Sleep(30);
+                                }
+                                finally
+                                {
+                                    throttler.Release();
+                                }
+                            }));
+                    }
+
+                    // Do the reverse search here
+                    List<Tuple<Airport, Airport>> ReverseDumpLegs = new List<Tuple<Airport, Airport>>();
+
+                    foreach (var DumpLeg in AllDumpLegs)
+                    {
+                        ReverseDumpLegs.Add(new Tuple<Airport, Airport>(DumpLeg.Item2, DumpLeg.Item1));
+                    }
                 }
 
-                // Do the reverse search here
-                List<Tuple<Airport, Airport>> ReverseDumpLegs = new List<Tuple<Airport, Airport>>();
+                watch.Stop();
 
-                foreach (var DumpLeg in AllDumpLegs)
-                {
-                    ReverseDumpLegs.Add(new Tuple<Airport, Airport>(DumpLeg.Item2, DumpLeg.Item1));
-                }
-            }
+                JobTimeTaken = (int)watch.Elapsed.TotalSeconds;
 
-            watch.Stop();
+                KillChromeDrivers();
+            } 
 
-            KillChromeDrivers();
-
-            Thread.Sleep(100000);
-
-            return (int)watch.Elapsed.TotalSeconds;
+            return JobTimeTaken;
         }
 
         public void KillChromeDrivers()
@@ -195,7 +207,7 @@ namespace FlightHack
                 options.AddArgument("no-sandbox");
                 options.AddArgument("ignore-certificate-errors");
                 options.AddArgument("ignore-ssl-errors");
-                //options.AddArgument("headless");
+                options.AddArgument("headless");
                 options.AddArgument("disable-extensions");
                 options.AddArgument("test-type");
                 options.AddArgument("excludeSwitches");

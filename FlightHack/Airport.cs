@@ -76,12 +76,12 @@ namespace FlightHack
             return JsonConvert.DeserializeObject<List<Airport>>(jsonString);
         }
 
-        public static double DistanceBetweenAirports(Airport A, Airport B)
+        public static int DistanceBetweenAirports(Airport A, Airport B)
         {
             var sCoord = new GeoCoordinate(double.Parse(A.Lat), double.Parse(A.Lon));
             var eCoord = new GeoCoordinate(double.Parse(B.Lat), double.Parse(B.Lon));
 
-            return sCoord.GetDistanceTo(eCoord)/1000.0;
+            return (int)Math.Round(sCoord.GetDistanceTo(eCoord)/1000.0);
         }
 
         /// <summary>
@@ -89,9 +89,9 @@ namespace FlightHack
         /// </summary>
         /// <param name="Airports">Distance in km</param>
         /// <returns></returns>
-        public static double AverageDistanceBetweenAllAirports(List<Airport> Airports)
+        public static int AverageDistanceBetweenAllAirports(List<Airport> Airports)
         {
-            double AverageDistance = 0.0;
+            int AverageDistance = 0;
 
             for(int i = 0; i < Airports.Count; i++)
             {
@@ -105,9 +105,8 @@ namespace FlightHack
 
             // Divide by the no of connections to get avg, covert to km
             AverageDistance /= NumberOfConnections;
-            AverageDistance /= 1000.0;
 
-            return AverageDistance;
+            return (int)Math.Round(AverageDistance/1000.0);
         }
 
         private static void PruneAirportsBasedOnCarriers(List<Airport> Airports, int MinNoOfCarriers)
@@ -125,7 +124,7 @@ namespace FlightHack
             }
         }
 
-        public static List<Tuple<Airport, Airport>> PruneDumpConnections(List<Airport> Airports, double MinDistance, double MaxDistance)
+        public static List<Tuple<Airport, Airport>> PruneDumpConnections(List<Airport> Airports, int MinDistance, int MaxDistance)
         {
             List<Tuple<Airport, Airport>> DumpConnections = new List<Tuple<Airport, Airport>>();
 
@@ -133,7 +132,7 @@ namespace FlightHack
             {
                 for (int j = (i + 1); j < Airports.Count; j++)
                 {
-                    double DistanceBetweenPair = DistanceBetweenAirports(Airports[i], Airports[j]);
+                    int DistanceBetweenPair = DistanceBetweenAirports(Airports[i], Airports[j]);
 
                     if(DistanceBetweenPair > MinDistance && DistanceBetweenPair < MaxDistance)
                     {
@@ -158,10 +157,8 @@ namespace FlightHack
         /// <param name="MaxDistance">Maximum distance for the search</param>
         /// <param name="BinSize">Used for splitting the list into managable chunks, so we don't kill the chrome driver</param>
         /// <returns></returns>
-        public static List<Tuple<Airport, Airport>> GetAllDumpConnections(string AirportFileLocation, int MinNoOfCarriers, double MinDistance, double MaxDistance)
+        public static List<Tuple<Airport, Airport>> GetAllDumpConnections(string AirportFileLocation, int MinNoOfCarriers, int MinDistance, int MaxDistance)
         {
-            //List<Tuple<Airport, Airport>> DumpConnections = new List<Tuple<Airport, Airport>>();
-
             List<Airport> Airports = ProcessFile(AirportFileLocation);
 
             int InitialNoOfAirports = Airports.Count;
@@ -190,8 +187,6 @@ namespace FlightHack
         /// <returns></returns>
         public static List<List<Tuple<Airport, Airport>>> CompleteAirportPruning(string AirportFileLocation, int MinNoOfCarriers, int MinDistance, int MaxDistance, int BinSize)
         {
-            //List<Tuple<Airport, Airport>> DumpConnections = new List<Tuple<Airport, Airport>>();
-
             List<Airport> Airports = ProcessFile(AirportFileLocation);
 
             int InitialNoOfAirports = Airports.Count;
