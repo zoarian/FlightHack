@@ -41,7 +41,7 @@ namespace FlightHack
             ResultsFileFullPath = Result.SaveResultsToFile(AppSettings["QueryResultPath"], Results, Input);
 
             // Send file to discord
-            Disc.SendResults(ResultsFileFullPath, Input, MatrixClient, NoOfQueriesPerformed, JobTimeTaken.ToString());
+            Disc.SendResults(ResultsFileFullPath, Input, MatrixClient, ItaMatrixHandler.LoopNo, JobTimeTaken.ToString());
 
             Environment.Exit(0);
         }
