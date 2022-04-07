@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using log4net;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Device.Location;
@@ -9,6 +10,8 @@ namespace FlightHack
 {
     public class Airport
     {
+        private static readonly ILog log = LogManager.GetLogger(typeof(App));
+
         [JsonProperty("code")]
         public string Code { get; set; }
 
@@ -113,7 +116,7 @@ namespace FlightHack
             {
                 if (Int32.Parse(Airports[i].Carriers) > MinNoOfCarriers)
                 {
-                    //Console.WriteLine(i.ToString() + " " + Airports[i].Code);
+                    // Passed the test
                 }
                 else
                 {
@@ -163,15 +166,15 @@ namespace FlightHack
 
             int InitialNoOfAirports = Airports.Count;
 
-            Console.WriteLine("#Airports From File: " + InitialNoOfAirports);
+            log.InfoFormat(" {0} airports from file", InitialNoOfAirports);
 
             PruneAirportsBasedOnCarriers(Airports, MinNoOfCarriers);
 
-            Console.WriteLine("#Airports After Carrier Pruning: " + Airports.Count);
+            log.InfoFormat(" {0} airports after carrier pruning", Airports.Count);
 
             List<Tuple<Airport, Airport>> DumpConnections = PruneDumpConnections(Airports, MinDistance, MaxDistance);
 
-            Console.WriteLine("#Dump Leg Connections: " + DumpConnections.Count);
+            log.InfoFormat(" {0} dump leg connections, based on the distance of {1} to {2}", DumpConnections.Count, MinDistance, MaxDistance);
 
             return DumpConnections;
         }
@@ -193,15 +196,15 @@ namespace FlightHack
 
             int InitialNoOfAirports = Airports.Count;
 
-            Console.WriteLine("#Airports From File: " + InitialNoOfAirports);
+            log.InfoFormat(" {0} airports from file", InitialNoOfAirports);
 
             PruneAirportsBasedOnCarriers(Airports, MinNoOfCarriers);
 
-            Console.WriteLine("#Airports After Carrier Pruning: " + Airports.Count);
+            log.InfoFormat(" {0} airports after carrier pruning", Airports.Count);
 
             List<Tuple<Airport, Airport>> DumpConnections = PruneDumpConnections(Airports, MinDistance, MaxDistance);
 
-            Console.WriteLine("#Dump Leg Connections: " + DumpConnections.Count);
+            log.InfoFormat(" {0} dump leg connections, based on the distance of {1} to {2}", DumpConnections.Count, MinDistance, MaxDistance);
 
             return Helpers.ChunkBy(DumpConnections, BinSize);
         }

@@ -29,7 +29,7 @@ namespace FlightHack.Query
             SumOfCarriers = "";
             DumpLegDepartureDate = "";
             TimeStamp = "";
-            QueryMessage = "Initiated Query";
+            QueryMessage = "";
         }
 
         public Result(string QueryTime, double NewFare, double DistanceBetweenDumpAirports, string DumpLegOriginCode, string DumpLegDestCode, string DumpLegDepartureDate, string TimeStamp, string QueryMessage, int SumOfCarriers)
@@ -45,15 +45,16 @@ namespace FlightHack.Query
             this.SumOfCarriers = SumOfCarriers.ToString();
         }
 
-        public static string SaveResultsToFile(string FilePath, List<Result> Results)
+        // This really needs to be moved to the job class
+        public static string SaveResultsToFile(string ResultsBaseFilePath, List<Result> Results, Input Input)
         {
-            string ResultsFileBaseName = "_Results.csv";
-            string ResultsFileFullPath = @"C:\FlightHack\Output\" + DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss") + ResultsFileBaseName;
+            string ResultsFileExtension = ".csv";
+            string ResultsFileFullPath = ResultsBaseFilePath + DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss") + "_" + Input.FixedLegs[0].OriginCity + "_TO_" + Input.FixedLegs[0].DestinationCity + ResultsFileExtension;
 
             // Create the file, or overwrite if the file exists.
             using (FileStream fs = File.Create(ResultsFileFullPath))
             {
-                byte[] info = new UTF8Encoding(true).GetBytes("This is some text in the file.");
+                byte[] info = new UTF8Encoding(true).GetBytes("Beep");
                 fs.Write(info, 0, info.Length);
             }
 
