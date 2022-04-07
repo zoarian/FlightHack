@@ -9,11 +9,14 @@ using OpenQA.Selenium.Support.UI;
 using FlightHack.Query;
 using System.IO;
 using System.Threading.Tasks;
+using log4net;
 
 namespace FlightHack
 {
     public class ItaMatrixHandler
     {
+        private static readonly ILog log = LogManager.GetLogger(typeof(App));
+
         [JsonProperty("Browser")]
         public string Browser { get; set; }
 
@@ -95,52 +98,72 @@ namespace FlightHack
             List<Tuple<Airport, Airport>> AllDumpLegs = Airport.GetAllDumpConnections(AirortFileLocation, Input.Airport.MinNoCarriers, Input.Airport.MinDist, Input.Airport.MaxDist);
             List<Input> InputList = new List<Input>();
 
-            Console.WriteLine("# Queries In Parallel: " + NoOfParallelSearches);
-
-            var throttler = new SemaphoreSlim(initialCount: NoOfParallelSearches);
-
             var watch = Stopwatch.StartNew();
-
             LoopNo = 0;
 
-            foreach (var DumpLeg in AllDumpLegs)
+            if (AllDumpLegs.Count == 1)
             {
-                await throttler.WaitAsync();
+                log.InfoFormat("{0}/{1} : dump leg connection {2} -> {3}", ++LoopNo, AllDumpLegs.Count, AllDumpLegs[0].Item1.Code, AllDumpLegs[0].Item2.Code);
 
-                allTasks.Add(
-                    Task.Run(() =>
-                    {
-                        try
-                        {
-                            Console.WriteLine("[" + Task.CurrentId.ToString() + "]   " + DumpLeg.Item1.Code + " -> " + DumpLeg.Item2.Code + "(" + LoopNo + "/" + AllDumpLegs.Count + ")");
-                            IssueQueryAsync(DumpLeg, Input, Results);
-                            Thread.Sleep(30);
-                        }
-                        finally
-                        {
-                            throttler.Release();
-                        }
-                    }));
-            }
-
-            // Do the reverse search here
-            List<Tuple<Airport, Airport>> ReverseDumpLegs = new List<Tuple<Airport, Airport>>();
-
-            foreach (var DumpLeg in AllDumpLegs)
+                IssueQueryAsync(AllDumpLegs[0], Input, Results);
+            } 
+            else 
             {
-                ReverseDumpLegs.Add(new Tuple<Airport, Airport>(DumpLeg.Item2, DumpLeg.Item1));
-            }
+                if (AllDumpLegs.Count < NoOfParallelSearches)
+                {
+                    NoOfParallelSearches = AllDumpLegs.Count;
 
+                    log.InfoFormat("Running {0} queries in parallel, lowered to the number of dump legs found", NoOfParallelSearches);
+                }
+                else
+                {
+                    log.InfoFormat("Running {0} queries in parallel", NoOfParallelSearches);
+                }
+
+                var throttler = new SemaphoreSlim(initialCount: NoOfParallelSearches);
+
+                foreach (var DumpLeg in AllDumpLegs)
+                {
+                    await throttler.WaitAsync();
+
+                    allTasks.Add(
+                        Task.Run(() =>
+                        {
+                            try
+                            {
+                                log.InfoFormat("{0}/{1} : dump leg connection {2} -> {3}", LoopNo, AllDumpLegs.Count, DumpLeg.Item1.Code, DumpLeg.Item2.Code);
+
+                                IssueQueryAsync(DumpLeg, Input, Results);
+                                Thread.Sleep(30);
+                            }
+                            finally
+                            {
+                                throttler.Release();
+                            }
+                        }));
+                }
+
+                // Do the reverse search here
+                List<Tuple<Airport, Airport>> ReverseDumpLegs = new List<Tuple<Airport, Airport>>();
+
+                foreach (var DumpLeg in AllDumpLegs)
+                {
+                    ReverseDumpLegs.Add(new Tuple<Airport, Airport>(DumpLeg.Item2, DumpLeg.Item1));
+                }
+            }
 
             watch.Stop();
 
             KillChromeDrivers();
+
+            Thread.Sleep(100000);
 
             return (int)watch.Elapsed.TotalSeconds;
         }
 
         public void KillChromeDrivers()
         {
+            log.Info("Killing chrome drivers");
             Process process = new Process();
             ProcessStartInfo startInfo = new ProcessStartInfo();
             startInfo.WindowStyle = ProcessWindowStyle.Hidden;
@@ -152,12 +175,6 @@ namespace FlightHack
 
         public void IssueQueryAsync(Tuple<Airport, Airport> DumpConnection, Input Input, List<Result> Results)
         {
-            // Add DumpLeg data to our input
-            //Input.DumpLeg.OriginCity = DumpConnection.Item1.Code;
-            //Input.DumpLeg.DestinationCity = DumpConnection.Item2.Code;
-            Input.DumpLeg.RoutingCode = "N";
-
-            Console.WriteLine("[" + Task.CurrentId.ToString() + "]   " + "Doing Dump Leg Connection: " + DumpConnection.Item1.Code + " -> " + DumpConnection.Item2.Code + "(" + LoopNo + ")");
             LoopNo++;
 
             Result CurrentSearch = new Result();
@@ -178,7 +195,7 @@ namespace FlightHack
                 options.AddArgument("no-sandbox");
                 options.AddArgument("ignore-certificate-errors");
                 options.AddArgument("ignore-ssl-errors");
-                options.AddArgument("headless");
+                //options.AddArgument("headless");
                 options.AddArgument("disable-extensions");
                 options.AddArgument("test-type");
                 options.AddArgument("excludeSwitches");
@@ -224,55 +241,56 @@ namespace FlightHack
                 IWebElement EFinalSearchButton = Driver.FindElement(By.XPath(SearchButtonXpath));
                 EFinalSearchButton.Click();
 
-                //Console.WriteLine("Searching For Flights...");
-
                 // TODO: Change this so we check if either NoResults or QueryResults are returned - asynch maybe?
                 try
                 {
                     w = new WebDriverWait(Driver, TimeSpan.FromSeconds(SearchLimitNoResults));
                     w.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath(NoResults)));
-
-                    Console.WriteLine("[" + Task.CurrentId.ToString() + "]   " + "No flights match the criteria");
-                    CurrentSearch.QueryMessage = "No flights match the criteria";
+#if DEBUG
+                    log.DebugFormat("No flights found for {0} -> {1}", DumpConnection.Item1.Code, DumpConnection.Item2.Code);
+#endif
                 }
                 catch (Exception ex)
                 {
                     try
                     {
-                        Console.WriteLine("[" + Task.CurrentId.ToString() + "]   " + "Error: " + ex.Message);
-                        Console.WriteLine("[" + Task.CurrentId.ToString() + "]   " + "We've not found a new search button - searching for prices now");
+#if DEBUG
+                        log.DebugFormat("{0} -> {1} - searching for flight prices", DumpConnection.Item1.Code, DumpConnection.Item2.Code);
+#endif
 
                         w = new WebDriverWait(Driver, TimeSpan.FromSeconds(SearchLimitWithResults));
                         w.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath(QueryResultXPath)));
 
                         IWebElement ENewPrice = Driver.FindElement(By.XPath(QueryResultXPath));
 
+                        string FoundResult;
                         CurrentSearch.NewFare = double.Parse(ENewPrice.Text.Trim('£'));
 
-                        Console.WriteLine("[" + Task.CurrentId.ToString() + "]   " + "Price with dump leg: " + DumpConnection.Item1.Code + "->" + DumpConnection.Item2.Code + " is: " + ENewPrice.Text);
-
                         if (CurrentSearch.NewFare < OriginalFare)
-                            Console.WriteLine("[" + Task.CurrentId.ToString() + "]   " + "We've got a cheaper fare: " + CurrentSearch.NewFare);
+                            FoundResult = "We've got a cheaper fare: " + CurrentSearch.NewFare + " compared to the original " + Input.General.OriginalFarePrice;
                         else
-                            Console.WriteLine("[" + Task.CurrentId.ToString() + "]   " + "No Luck: " + CurrentSearch.NewFare);
+                            FoundResult = "New fare (" + CurrentSearch.NewFare + ") is more expensive than the original " + Input.General.OriginalFarePrice;
 
-                        CurrentSearch.QueryMessage = "We've not found a new search button - searching for prices now";
+                        log.InfoFormat("{0} -> {1} dump leg found a fare. {2}", DumpConnection.Item1.Code, DumpConnection.Item2.Code, FoundResult);
                     }
                     catch (Exception e)
                     {
-                        Console.WriteLine("[" + Task.CurrentId.ToString() + "]   " + "Error: " + e.Message);
-
+#if DEBUG
+                        log.DebugFormat("{0} -> {1} reached timeout for fare finding. Trying to see if the original timeout (for no results) was too short", DumpConnection.Item1.Code, DumpConnection.Item2.Code);
+#endif
                         try
                         {
-                            w = new WebDriverWait(Driver, TimeSpan.FromSeconds(SearchLimitNoResults));
+                            w = new WebDriverWait(Driver, TimeSpan.FromSeconds(5));
                             w.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath(NoResults)));
 
-                            Console.WriteLine("[" + Task.CurrentId.ToString() + "]   " + "No flights match the criteria");
-                            CurrentSearch.QueryMessage = "No flights match the criteria";
+#if DEBUG
+                            log.DebugFormat("{0} -> {1} - he original no result timeout was too short", DumpConnection.Item1.Code, DumpConnection.Item2.Code);
+#endif
+                            CurrentSearch.QueryMessage = "The original no result timeout was too short";
                         }
                         catch (Exception exc)
                         {
-                            Console.WriteLine("[" + Task.CurrentId.ToString() + "]   " + "Error: " + exc.Message);
+                            log.ErrorFormat("{0} -> {1} - the no results timeout wasn't too short. Error: {2}", DumpConnection.Item1.Code, DumpConnection.Item2.Code, exc.Message);
                             CurrentSearch.QueryMessage = exc.Message;
                         }
                     }
@@ -282,7 +300,7 @@ namespace FlightHack
             }
             catch (Exception e)
             {
-                Console.WriteLine("[" + Task.CurrentId.ToString() + "]   " + "Exception in Overall Query: " + e.Message);
+                log.ErrorFormat("Exception in Overall Query: {0}", e.Message);
                 CurrentSearch.QueryMessage = e.Message;
                 CurrentSearch.NewFare = -1;
             }
@@ -302,14 +320,10 @@ namespace FlightHack
 
         public void PupulateLegs(IWebDriver Driver, Input Input, Tuple<Airport, Airport> DumpConnection)
         {
-            //Console.WriteLine("Populating Legs With Flight Data");
-
             IWebElement WebEl;
 
             for (int LegNo = 0; LegNo < Input.FixedLegs.Count; LegNo++)
             {
-                //Console.WriteLine("Fixed Leg: " + LegNo);
-
                 LegIDs Leg = new LegIDs(LegNo);
 
                 WebEl = Driver.FindElement(By.Id(Leg.OriginCityID));
@@ -319,8 +333,6 @@ namespace FlightHack
                 WebEl = Driver.FindElement(By.Id(Leg.DestinationCityID));
                 WebEl.SendKeys(Input.FixedLegs[LegNo].DestinationCity);
                 WebEl.SendKeys(Keys.Tab);
-
-                //Console.WriteLine(Input.FixedLegs[LegNo].Date);
 
                 WebEl = Driver.FindElement(By.Id(Leg.DateID));
                 WebEl.SendKeys(Input.FixedLegs[LegNo].Date);
@@ -356,8 +368,6 @@ namespace FlightHack
             }
 
             int LegN = Input.FixedLegs.Count;
-
-            //Console.WriteLine("Populating Dump Leg Now");
 
             LegIDs DLeg = new LegIDs(LegN);
 
