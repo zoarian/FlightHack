@@ -6,6 +6,8 @@ using log4net;
 using static FlightHack.Globals;
 using System.Diagnostics;
 using System.Threading;
+using Newtonsoft.Json;
+using System.IO;
 
 namespace FlightHack
 {
@@ -20,14 +22,14 @@ namespace FlightHack
         private static readonly ILog log = LogManager.GetLogger(typeof(App));
 
         // To make life easier
-        public int JobID { get; set; }
-        public string JobName { get; set; }
+        public int ID { get; set; }
+        public string Name { get; set; }
 
         // Time data
         public int EstimatedProcessingTime { get; set; } // all these are in seconds
         public int EstimatedQueuingTime { get; set; }
         public int TotalProcessingTime { get; set; }
-        public int TotalQueuingTime { get; set; }   
+        public int TotalQueuingTime { get; set; }
         public DateTime Queued { get; set; }
         public DateTime Started { get; set; }
         public DateTime Completed { get; set; }
@@ -36,13 +38,14 @@ namespace FlightHack
         public Status Status { get; set; }
         public int CurrentQueryNo { get; set; }
         public int TotalNoOfQueries { get; set; } // This is #DumpLegs x 2 (A->B, B->A)
+        public int NoOfParallelSearches { get; set; }
+        public string ResultsFileFullPath { get; set; }
         public Input Input { get; set; }
-
         public List<Task> AllTasks { get; set; }
-
         public List<Result> Results { get; set; }
+        public List<Tuple<Airport, Airport>> AllDumpLegs { get; set; }
 
-        public Job() 
+        public Job()
         {
             Status = Status.Initial;
 
@@ -52,95 +55,125 @@ namespace FlightHack
             Results = new List<Result>();
             AllTasks = new List<Task>();
 
-            JobID = 0;
-            JobName = "Initial Job";
+            ID = 0;
+            Name = "Initial Job";
         }
 
         public Job(int JobID, Input Input)
         {
-            this.JobID = JobID;
+            this.ID = JobID;
             this.Input = Input;
         }
 
-        public async Task<int> StartJobAsync(Input Input, List<Result> Results, string AirortFileLocation)
+        public async Task<Job> ProcessAndPutInQueue(string AirortFileLocation)
         {
-            List<Tuple<Airport, Airport>> AllDumpLegs = Airport.GetAllDumpConnections(AirortFileLocation, Input.Airport.MinNoCarriers, Input.Airport.MinDist, Input.Airport.MaxDist);
+            // Check if you can process the input for a job and put in queue
+            StreamReader r = new StreamReader(Globals.MatrixClient.JsonFileLocation);
+            Input Input = JsonConvert.DeserializeObject<Input>(r.ReadToEnd());
 
-            if (AllDumpLegs.Count < 1)
-            {
-                log.InfoFormat("No dump legs found, aborting the job");
-            }
-            else
-            {
-                var watch = Stopwatch.StartNew();
+            AllDumpLegs = Airport.GetAllDumpConnections(AirortFileLocation, Input.Airport.MinNoCarriers, Input.Airport.MinDist, Input.Airport.MaxDist);
 
-                if (AllDumpLegs.Count == 1)
+            return this;
+        }
+
+        /// <summary>
+        /// Starts a job and returns a task that returns 
+        /// </summary>
+        /// <param name="Input"></param>
+        /// <param name="Results"></param>
+        /// <param name="AirortFileLocation"></param>
+        /// <returns></returns>
+        public async Task StartJobAsync()
+        {
+            Status = Status.InProgress;
+
+            try
+            {
+                if (AllDumpLegs.Count < 1)
                 {
-                    log.InfoFormat("{0}/{1} : dump leg connection {2} -> {3}", ++CurrentQueryNo, AllDumpLegs.Count, AllDumpLegs[0].Item1.Code, AllDumpLegs[0].Item2.Code);
-
-                    IssueQueryAsync(AllDumpLegs[0], Input, Results);
+                    log.InfoFormat("No dump legs found, aborting the job");
                 }
                 else
                 {
+                    var watch = Stopwatch.StartNew();
 
-
-                    if (AllDumpLegs.Count < NoOfParallelSearches)
+                    if (AllDumpLegs.Count == 1)
                     {
-                        NoOfParallelSearches = AllDumpLegs.Count;
+                        log.InfoFormat("{0}/{1} : dump leg connection {2} -> {3}", ++CurrentQueryNo, AllDumpLegs.Count, AllDumpLegs[0].Item1.Code, AllDumpLegs[0].Item2.Code);
 
-                        log.InfoFormat("Running {0} queries in parallel, lowered to the number of dump legs found", NoOfParallelSearches);
+                        MatrixClient.IssueQueryAsync(AllDumpLegs[0], Input, Results);
                     }
                     else
                     {
-                        log.InfoFormat("Running {0} queries in parallel", NoOfParallelSearches);
-                    }
+                        if (AllDumpLegs.Count < NoOfParallelSearches)
+                        {
+                            NoOfParallelSearches = AllDumpLegs.Count;
 
-                    var throttler = new SemaphoreSlim(initialCount: NoOfParallelSearches);
+                            log.InfoFormat("Running {0} queries in parallel, lowered to the number of dump legs found", NoOfParallelSearches);
+                        }
+                        else
+                        {
+                            log.InfoFormat("Running {0} queries in parallel", NoOfParallelSearches);
+                        }
 
-                    foreach (var DumpLeg in AllDumpLegs)
-                    {
-                        await throttler.WaitAsync();
+                        var throttler = new SemaphoreSlim(initialCount: NoOfParallelSearches);
 
-                        AllTasks.Add(
-                            Task.Run(() =>
-                            {
-                                try
+                        foreach (var DumpLeg in AllDumpLegs)
+                        {
+                            await throttler.WaitAsync();
+
+                            AllTasks.Add(
+                                Task.Run(() =>
                                 {
-                                    log.InfoFormat("{0}/{1} : dump leg connection {2} -> {3}", CurrentQueryNo, AllDumpLegs.Count, DumpLeg.Item1.Code, DumpLeg.Item2.Code);
+                                    try
+                                    {
+                                        log.InfoFormat("{0}/{1} : dump leg connection {2} -> {3}", CurrentQueryNo, AllDumpLegs.Count, DumpLeg.Item1.Code, DumpLeg.Item2.Code);
 
-                                    IssueQueryAsync(DumpLeg, Input, Results);
-                                    Thread.Sleep(30);
-                                }
-                                finally
-                                {
-                                    throttler.Release();
-                                }
-                            }));
+                                        MatrixClient.IssueQueryAsync(DumpLeg, Input, Results);
+                                        Thread.Sleep(30);
+                                    }
+                                    finally
+                                    {
+                                        throttler.Release();
+                                    }
+                                }));
+                        }
+
+                        // Do the reverse search here
+                        List<Tuple<Airport, Airport>> ReverseDumpLegs = new List<Tuple<Airport, Airport>>();
+
+                        foreach (var DumpLeg in AllDumpLegs)
+                        {
+                            ReverseDumpLegs.Add(new Tuple<Airport, Airport>(DumpLeg.Item2, DumpLeg.Item1));
+                        }
                     }
 
-                    // Do the reverse search here
-                    List<Tuple<Airport, Airport>> ReverseDumpLegs = new List<Tuple<Airport, Airport>>();
+                    watch.Stop();
 
-                    foreach (var DumpLeg in AllDumpLegs)
-                    {
-                        ReverseDumpLegs.Add(new Tuple<Airport, Airport>(DumpLeg.Item2, DumpLeg.Item1));
-                    }
+                    TotalProcessingTime = (int)watch.Elapsed.TotalSeconds;
                 }
-
-                watch.Stop();
-
-                TotalProcessingTime = (int)watch.Elapsed.TotalSeconds;
-
-                KillChromeDrivers();
+            }
+            catch (Exception JobException)
+            {
+                log.ErrorFormat("Job {0}, {1} failed. Exception {2}", ID, Name, JobException.Message);
+                Status = Status.Failed;
+                // Dump the current job into json file
             }
 
-            return JobTimeTaken;
+            //return this;
         }
 
-
-        public void CompleteJob()
+        public async Task CompleteJob()
         {
+            MatrixClient.KillChromeDrivers();
 
+            // Dump the results in a file (temp location?)
+            ResultsFileFullPath = Result.SaveResultsToFile(Globals.AppSettings["QueryResultPath"], Results, Input);
+
+            // Send over discord
+            Globals.Disc.SendResults(ResultsFileFullPath, this);
+
+            Status = Status.Completed; // Only "Complete" the job once we've processed everything - async or no????
         }
     }
 }

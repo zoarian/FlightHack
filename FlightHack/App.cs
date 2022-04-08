@@ -16,23 +16,16 @@ namespace FlightHack
 
         public static async Task Main(string[] args)
         {
-            int JobTimeTaken = 0;
-            int NoOfQueriesPerformed = 0; 
-            string ResultsFileFullPath;
-
-            var AppSettings = ConfigurationManager.AppSettings;
-            XmlConfigurator.Configure(new FileInfo(AppSettings["Log4netLocation"]));
+            Globals.AppSettings = ConfigurationManager.AppSettings;
+            XmlConfigurator.Configure(new FileInfo(Globals.AppSettings["Log4netLocation"]));
 
             log.Info("FlightHack App Startup Was Successfull");
 
             // Client Initialization
-            List<Result> Results = new List<Result>();
+            Globals.Disc = new DiscordClient(Globals.AppSettings["DiscordWebhookURL"], Globals.AppSettings["AvatarUrl"]);
+            Globals.MatrixClient = new ItaMatrixHandler(Globals.AppSettings["ItaMatrixConfig"], Globals.AppSettings["ChromeDriverPath"]);
 
-            DiscordClient Disc = new DiscordClient(AppSettings["DiscordWebhookURL"], AppSettings["AvatarUrl"]);
-            ItaMatrixHandler MatrixClient = new ItaMatrixHandler(AppSettings["ItaMatrixConfig"], AppSettings["ChromeDriverPath"]);
-
-            StreamReader r = new StreamReader(MatrixClient.JsonFileLocation);
-            Input Input = JsonConvert.DeserializeObject<Input>(r.ReadToEnd());
+            QueueManager JobQueue = new QueueManager();
 
             // TODO: Initialize the queueing system. 
             // - Check file location
@@ -46,13 +39,16 @@ namespace FlightHack
             
             while(IsRunning)
             {
-                // Main Loop
-                
-                // Queue manager checks for new job conditions (file/discord webhook/rest???)
+                JobQueue.ScanForNewJobs();
+
+                if(JobQueue.IssueNewJob)
+                {
+
+                }
 
                 // If Queue IS NOT empty and Queue has no job in progress
                 // start work
-                if(WorkCondition)
+                if (WorkCondition)
                 {
 
                 }
@@ -61,15 +57,6 @@ namespace FlightHack
 
                 }
             }
-
-            // Perform the job
-            //JobTimeTaken = await MatrixClient.StartJobAsync(Input, Results, AppSettings["AirortDataFile"]);
-
-            // Save the results
-            ResultsFileFullPath = Result.SaveResultsToFile(AppSettings["QueryResultPath"], Results, Input);
-
-            // Send file to discord
-            Disc.SendResults(ResultsFileFullPath, Input, MatrixClient, ItaMatrixHandler.LoopNo, JobTimeTaken.ToString());
 
             Environment.Exit(0);
         }
