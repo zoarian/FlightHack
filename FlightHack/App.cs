@@ -48,6 +48,7 @@ namespace FlightHack
             {
                 // Main Loop
                 
+                // Queue manager checks for new job conditions (file/discord webhook/rest???)
 
                 // If Queue IS NOT empty and Queue has no job in progress
                 // start work

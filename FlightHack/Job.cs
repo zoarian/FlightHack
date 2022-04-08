@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using static FlightHack.App;
+using static FlightHack.Globals;
 
 namespace FlightHack
 {
@@ -28,6 +30,7 @@ namespace FlightHack
         public DateTime Completed { get; set; }
 
         // For processing
+        public Status Status { get; set; }
         public int CurrentQueryNo { get; set; }
         public int TotalNoOfQueries { get; set; } // This is #DumpLegx x 2 (A->B, B->A)
     }
