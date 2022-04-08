@@ -71,9 +71,6 @@ namespace FlightHack
         const string DumpLegDateFlexIDButton = "mat-select-32";
         const string PlusMinus2days = "/html/body/div[3]/div[2]/div/div/div/mat-option[5]/span";
 
-        // Add this to the query input
-        public double OriginalFare { get; set; }
-
         public ItaMatrixHandler() { }
 
         public ItaMatrixHandler(string FilePath, string DriverPath)
@@ -282,7 +279,7 @@ namespace FlightHack
                         string FoundResult;
                         CurrentSearch.NewFare = double.Parse(ENewPrice.Text.Trim('£'));
 
-                        if (CurrentSearch.NewFare < OriginalFare)
+                        if (CurrentSearch.NewFare < Input.General.OriginalFarePrice)
                             FoundResult = "We've got a cheaper fare: " + CurrentSearch.NewFare + " compared to the original " + Input.General.OriginalFarePrice;
                         else
                             FoundResult = "New fare (" + CurrentSearch.NewFare + ") is more expensive than the original " + Input.General.OriginalFarePrice;

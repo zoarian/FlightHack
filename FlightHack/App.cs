@@ -34,6 +34,33 @@ namespace FlightHack
             StreamReader r = new StreamReader(MatrixClient.JsonFileLocation);
             Input Input = JsonConvert.DeserializeObject<Input>(r.ReadToEnd());
 
+            // TODO: Initialize the queueing system. 
+            // - Check file location
+            // If no files -> idle
+            // If there are files -> check if in queue or not
+            // If files not in queue -> put in queue
+            // If all files are in queue...
+
+            bool IsRunning = false;
+            bool WorkCondition = true;
+            
+            while(IsRunning)
+            {
+                // Main Loop
+                
+
+                // If Queue IS NOT empty and Queue has no job in progress
+                // start work
+                if(WorkCondition)
+                {
+
+                }
+                else
+                {
+
+                }
+            }
+
             // Perform the job
             JobTimeTaken = await MatrixClient.StartJobAsync(Input, Results, AppSettings["AirortDataFile"]);
 
