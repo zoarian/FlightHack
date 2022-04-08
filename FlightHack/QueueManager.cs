@@ -5,7 +5,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using log4net;
-using log4net.Config;
 using static FlightHack.Globals;
 
 namespace FlightHack
@@ -14,10 +13,10 @@ namespace FlightHack
     {
         private static readonly ILog log = LogManager.GetLogger(typeof(App));
 
-        public int JobsInQueue;
-        public int JobsInProgress;
-        public int JobsCompleted;
-        public int JobsFailed;
+        public static int JobsInQueue;
+        public static int JobsInProgress;
+        public static int JobsCompleted;
+        public static int JobsFailed;
 
         public static Queue<Job> JobQueue; // This will act as out job list
 
@@ -40,27 +39,17 @@ namespace FlightHack
             // - REST request?
             // - file location
 
-            if(NewJobs)
-            {
-                // Go through each new job:
-                // check if they pass the data criteria
-                // add to the stack
-            }
-            else
-            {
-                // do nothing
-            }
 
         }
 
         public void CheckQueueStatus()
         {
-
 #if DEBUG
             log.DebugFormat("Checking Queue Status");
 #endif
-            
-            if(JobQueue.Count > 0)
+            bool AreThereJobsInProgress = false;
+
+            if (JobQueue.Count > 0)
             {
                 // First, check if we have any jobs
             }
@@ -74,27 +63,42 @@ namespace FlightHack
 
                 if (BottomOfStack.Status == Status.InProgress)
                 {
-
+                    AreThereJobsInProgress = true;
                 }
                 else if(BottomOfStack.Status == Status.Completed)
                 {
                     JobsCompleted++;
+                    JobsInProgress = 0;
+
+                    // Complete Job (async) -> then dequeue 
                     JobQueue.Dequeue();
                 }
                 else if(BottomOfStack.Status == Status.Failed)
                 {
+                    JobsFailed++;
+                    JobsInProgress = 0;
 
+                    // Send Failure code (async) -> then dequeue
+                    JobQueue.Dequeue();
                 }
+                else if(BottomOfStack.Status == Status.InQueue)
+                {
+                    // Initialize jobs
+                }
+                else
+                {
+                    // Bottom of the stack is NEITHER In Progress, Completed, Failed or In Queue
+                    // Check other jobs to see what's going on
 
-                // We've got a job that's in progress
-                // Don't need to do anything on that front
+                    log.ErrorFormat("Bottom of the queue stack. Job {0} is {1}", BottomOfStack, BottomOfStack.Status);
+                }
             }
 
-            bool JobsInProgress = false;
+            
 
             // Check if there's any jobs in progress
 
-            if(JobsInProgress)
+            if(AreThereJobsInProgress)
             {
                 if(false)
                 {

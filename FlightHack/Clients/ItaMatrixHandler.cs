@@ -93,7 +93,7 @@ namespace FlightHack
             this.DriverPath = DriverPath;
         }
 
-        public async Task<int> StartJobAsync(Input Input, List<Result> Results, string AirortFileLocation)
+/*        public async Task<int> StartJobAsync(Input Input, List<Result> Results, string AirortFileLocation)
         {
             List<Task> allTasks = new List<Task>();
             List<Tuple<Airport, Airport>> AllDumpLegs = Airport.GetAllDumpConnections(AirortFileLocation, Input.Airport.MinNoCarriers, Input.Airport.MinDist, Input.Airport.MaxDist);
@@ -173,7 +173,7 @@ namespace FlightHack
 
             return JobTimeTaken;
         }
-
+*/
         public void KillChromeDrivers()
         {
             log.Info("Killing chrome drivers");
