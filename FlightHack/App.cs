@@ -29,7 +29,7 @@ namespace FlightHack
             List<Result> Results = new List<Result>();
 
             DiscordClient Disc = new DiscordClient(AppSettings["DiscordWebhookURL"], AppSettings["AvatarUrl"]);
-            ItaMatrixHandler MatrixClient = new ItaMatrixHandler(AppSettings["ItaMatrixConfig"]);
+            ItaMatrixHandler MatrixClient = new ItaMatrixHandler(AppSettings["ItaMatrixConfig"], AppSettings["ChromeDriverPath"]);
 
             StreamReader r = new StreamReader(MatrixClient.JsonFileLocation);
             Input Input = JsonConvert.DeserializeObject<Input>(r.ReadToEnd());

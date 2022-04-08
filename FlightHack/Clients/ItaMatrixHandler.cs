@@ -50,6 +50,9 @@ namespace FlightHack
         [JsonProperty("URL")]
         public string URL { get; set; }
 
+        [JsonProperty("DriverPath")]
+        public string DriverPath { get; set; }
+
         // This should really go into the Job Class
         public static int LoopNo { get; set; }
 
@@ -73,7 +76,7 @@ namespace FlightHack
 
         public ItaMatrixHandler() { }
 
-        public ItaMatrixHandler(string FilePath)
+        public ItaMatrixHandler(string FilePath, string DriverPath)
         {
             StreamReader r = new StreamReader(FilePath);
             ItaMatrixHandler temp = JsonConvert.DeserializeObject<ItaMatrixHandler>(r.ReadToEnd());
@@ -90,6 +93,7 @@ namespace FlightHack
             this.SleepTimer = temp.SleepTimer;
             this.WebElementTimeout = temp.WebElementTimeout;
             this.URL = temp.URL;
+            this.DriverPath = DriverPath;
         }
 
         public async Task<int> StartJobAsync(Input Input, List<Result> Results, string AirortFileLocation)
@@ -219,7 +223,7 @@ namespace FlightHack
                 options.AddArgument("--disable-gpu");
                 options.AddArgument("--disable-dev-shm-usage");
 
-                ChromeDriverService service = ChromeDriverService.CreateDefaultService();
+                ChromeDriverService service = ChromeDriverService.CreateDefaultService(DriverPath);
                 service.SuppressInitialDiagnosticInformation = true;
                 service.HideCommandPromptWindow = true;
 

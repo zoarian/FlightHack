@@ -35,7 +35,7 @@
     <None Update="Data\Airports.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
-    <None Update="chromedriver.exe">
+    <None Update="Drivers\chromedriver.exe">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="Config\ItaMatricClient.json">
