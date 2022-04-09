@@ -26,7 +26,7 @@ namespace FlightHack
         {
             Initial,
             Idling,
-            NewFile,
+            NewJobData,
             JobReadyForProcessing,
             JobInProgress,
             JobReadyForDeletion,

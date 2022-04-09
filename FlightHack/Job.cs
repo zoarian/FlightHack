@@ -65,15 +65,27 @@ namespace FlightHack
             this.Input = Input;
         }
 
-        public async Task<Job> ProcessAndPutInQueue(string AirortFileLocation)
+        public Job(int JobID, string NewFileLocation)
         {
             // Check if you can process the input for a job and put in queue
-            StreamReader r = new StreamReader(Globals.MatrixClient.JsonFileLocation);
+            StreamReader r = new StreamReader(NewFileLocation);
             Input Input = JsonConvert.DeserializeObject<Input>(r.ReadToEnd());
 
-            AllDumpLegs = Airport.GetAllDumpConnections(AirortFileLocation, Input.Airport.MinNoCarriers, Input.Airport.MinDist, Input.Airport.MaxDist);
+            this.ID = JobID;
+            this.Input = Input;
+            this.AllDumpLegs = Airport.GetAllDumpConnections(AppSettings["AirortDataFile"], Input.Airport.MinNoCarriers, Input.Airport.MinDist, Input.Airport.MaxDist);
+        }
 
-            return this;
+        public async Task<Job> ProcessAndPutInQueue(int JobID, string NewFileLocation)
+        {
+            // Check if you can process the input for a job and put in queue
+            StreamReader r = new StreamReader(NewFileLocation);
+            Input Input = JsonConvert.DeserializeObject<Input>(r.ReadToEnd());
+
+            Job Temp = new Job(JobID, Input);
+            Temp.AllDumpLegs = Airport.GetAllDumpConnections(AppSettings["AirortDataFile"], Input.Airport.MinNoCarriers, Input.Airport.MinDist, Input.Airport.MaxDist);
+
+            return Temp;
         }
 
         /// <summary>

@@ -25,7 +25,9 @@ namespace FlightHack
             Globals.Disc = new DiscordClient(Globals.AppSettings["DiscordWebhookURL"], Globals.AppSettings["AvatarUrl"]);
             Globals.MatrixClient = new ItaMatrixHandler(Globals.AppSettings["ItaMatrixConfig"], Globals.AppSettings["ChromeDriverPath"]);
 
-            QueueManager JobQueue = new QueueManager();
+            string NewFiles = "C:\\Users\\mikop\\Documents\\Projects\\FlightHack\\InputTest\\";
+
+            QueueManager JobQueue = new QueueManager(NewFiles);
 
             // TODO: Initialize the queueing system. 
             // - Check file location
@@ -34,28 +36,17 @@ namespace FlightHack
             // If files not in queue -> put in queue
             // If all files are in queue...
 
-            bool IsRunning = false;
-            bool WorkCondition = true;
-            
-            while(IsRunning)
+            bool IsRunning = true;
+
+            Console.Read();
+
+            while (IsRunning)
             {
                 JobQueue.ScanForNewJobs();
 
-                if(JobQueue.IssueNewJob)
-                {
+                JobQueue.CheckQueueStatus();
 
-                }
-
-                // If Queue IS NOT empty and Queue has no job in progress
-                // start work
-                if (WorkCondition)
-                {
-
-                }
-                else
-                {
-
-                }
+                JobQueue.QueueManagement();
             }
 
             Environment.Exit(0);

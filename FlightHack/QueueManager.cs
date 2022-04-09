@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using FlightHack.Query;
 using log4net;
+using Newtonsoft.Json;
 using static FlightHack.Globals;
 
 namespace FlightHack
@@ -19,13 +22,16 @@ namespace FlightHack
         public static int JobsCompleted;
         public static int JobsFailed;
 
+        public string NewInputFile;
+        public static Input InputBuffer;
         public static Queue<Job> JobQueue; // This will act as out job list
 
         // Need some way to know which jobs are new
 
-        public QueueManager()
+        public QueueManager(string NewFilePath)
         {
-
+            CreateWatcher(NewFilePath);
+            JobQueue = new Queue<Job>();
         }
 
         /// <summary>
@@ -35,26 +41,93 @@ namespace FlightHack
         {
             bool NewJobs = false;
             string NewFilePath = "";
+
             // Scan:
             // - discord
             // - REST request?
             // - file location
 
-            if(NewJobs)
+            if (NewJobs)
             {
-                CheckAndSanitizeInput(NewFilePath);
+                //CheckAndSanitizeInput(NewFilePath);
             }
             else
             {
 
             }
         }
-
-        private void CheckAndSanitizeInput(string NewFilePath)
+       
+        /// <summary>
+        /// A watcher that will scan for new files 
+        /// </summary>
+        /// <param name="NewFilePath"></param>
+        private void CreateWatcher(string NewFilePath)
         {
-            // Input file is invalid
+            //Create a new FileSystemWatcher.
+            FileSystemWatcher watcher = new FileSystemWatcher();
+            watcher.NotifyFilter = NotifyFilters.LastWrite;
+            watcher.Filter = "*.json";
+            //watcher.Created += new FileSystemEventHandler(NewFileDetected);
+            watcher.Changed += new FileSystemEventHandler(NewFileDetected);
+            watcher.Path = NewFilePath;
+            watcher.EnableRaisingEvents = true;
+        }
 
-            // Input file doesn't have crucial data
+        private void NewFileDetected(object sender, FileSystemEventArgs e)
+        {
+            log.InfoFormat("Found new files: {0}, Path: {1}", e.Name, e.FullPath);
+
+            CheckAndSanitizeInput(e.FullPath, e.Name);
+            // Check the 
+        }
+
+
+        private void CheckAndSanitizeInput(string NewFilePath, string FileName)
+        {
+            // We're only getting JSON files from the filter - no need to check for file type
+            bool InputFailed = false;
+            string InputProcessMessage = "File " + FileName + " \n";
+
+            try
+            {
+                // Try deserializing the file
+                StreamReader r = new StreamReader(NewFilePath);
+                Input Input = JsonConvert.DeserializeObject<Input>(r.ReadToEnd());
+
+                log.Info("Deserialized the new input file");
+                InputProcessMessage += "JSON deserialized successfully\n";
+
+                // Check for crucial input data
+                // Conditions are:
+                // - we need at least 1 passenger
+                // - we need at least 1 leg, with origin & destination cities + date
+                // - we need at least 1 dump leg with date
+                // - we need ALL search space constraints
+                try
+                {
+                    int NoOfPassengers = Input.General.NoOfInfantsInLap + Input.General.NoOfInfantsInSeat + Input.General.NoOfYouths + Input.General.NoOfChildren + Input.General.NoOfAdults + Input.General.NoOfSeniors;
+                    
+                    if(NoOfPassengers < 1)
+                    {
+                        InputFailed = true;
+                        InputFailMessage += "There must be at least 1 passenger in the input file\n";
+                    }
+                    else
+                    {
+
+                    }
+
+
+                }
+                catch (Exception ex)
+                {
+
+                }
+            }
+            catch (Exception e)
+            {
+                log.ErrorFormat("Failed to parse file {0}, error: {1}", FileName, e.Message);
+            }
 
             // Input file is ok, but the criteria is too strict and there's no dump legs
         }
@@ -62,11 +135,10 @@ namespace FlightHack
         public async void CheckQueueStatus()
         {
 #if DEBUG
-            log.DebugFormat("Checking queue status");
+            log.DebugFormat("Checking queue status. Jobs in queue: {0}", JobQueue.Count);
 #endif
-            bool AreThereJobsInProgress = false;
 
-            if (JobQueue.Count > 0)
+            if (JobQueue.Count == 0)
             {
 #if DEBUG
                 log.DebugFormat("Queue manager is idling");
@@ -85,7 +157,7 @@ namespace FlightHack
                 {
                     QStatus = QStatus.JobInProgress;
                 }
-                else if(BottomOfStack.Status == Status.Completed)
+                else if (BottomOfStack.Status == Status.Completed)
                 {
                     JobsCompleted++;
                     JobsInProgress = 0;
@@ -97,7 +169,7 @@ namespace FlightHack
                     // Complete Job (async) -> then dequeue 
                     // Dequeue in Processing ??? JobQueue.Dequeue();
                 }
-                else if(BottomOfStack.Status == Status.Failed)
+                else if (BottomOfStack.Status == Status.Failed)
                 {
                     JobsFailed++;
                     JobsInProgress = 0;
@@ -108,7 +180,7 @@ namespace FlightHack
                     // Send Failure code (async) -> then dequeue
                     //JobQueue.Dequeue();
                 }
-                else if(BottomOfStack.Status == Status.InQueue)
+                else if (BottomOfStack.Status == Status.InQueue)
                 {
                     QStatus = QStatus.JobReadyForProcessing;
                 }
@@ -124,6 +196,24 @@ namespace FlightHack
 
         public void QueueManagement()
         {
+            int JobID = 0;
+
+            switch (QStatus)
+            {
+                case QStatus.NewJobData:
+                    JobQueue.Enqueue(new Job(JobID, NewInputFile));
+                    break;
+                case QStatus.JobInProgress:
+                    log.Debug("In Progress");
+                    break;
+                case QStatus.JobReadyForDeletion:
+                    JobQueue.Dequeue();
+                    break;
+                case QStatus.JobReadyForProcessing:
+                    JobQueue.Peek().StartJobAsync();
+                    break;
+            }
+
         }
     }
 }
