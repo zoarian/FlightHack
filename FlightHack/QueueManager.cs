@@ -5,6 +5,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using FlightHack.Query;
 using log4net;
@@ -67,6 +68,8 @@ namespace FlightHack
             // Copy the file to archive location
             File.Copy(e.FullPath, (Globals.AppSettings["InputArchiveBaseDirectory"] + e.Name));
 
+            Thread.Sleep(100);
+
             // Delete the old file
             File.Delete(e.FullPath);
         }
@@ -124,7 +127,7 @@ namespace FlightHack
                             InputProcessMessage += "The destination city of 1st leg does not have a match in the airport list\n";
                         }
 
-                        bool IsValidDateLeg1 = DateTime.TryParseExact(Input.FixedLegs[0].Date, "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out temp);
+                        bool IsValidDateLeg1 = DateTime.TryParseExact(Input.FixedLegs[0].Date, "MM/dd/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out temp);
 
                         if (!IsValidDateLeg1)
                         {
@@ -140,7 +143,7 @@ namespace FlightHack
 
                     if(Input.DumpLeg.Date != null)
                     {
-                        bool IsValidDateDumpLeg = DateTime.TryParseExact(Input.DumpLeg.Date, "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out temp);
+                        bool IsValidDateDumpLeg = DateTime.TryParseExact(Input.DumpLeg.Date, "MM/dd/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out temp);
 
                         if (!IsValidDateDumpLeg)
                         {
@@ -151,7 +154,7 @@ namespace FlightHack
                     else
                     {
                         InputPassedMuster = false;
-                        InputProcessMessage += "The departure date of first leg is invalid\n";
+                        InputProcessMessage += "The departure date of dump leg is invalid\n";
                     }
 
                     if(Input.Airport.MinDist != null && Input.Airport.MaxDist != null && Input.Airport.MinNoCarriers != null)
