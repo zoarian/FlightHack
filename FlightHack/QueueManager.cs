@@ -110,12 +110,14 @@ namespace FlightHack
                     if(NoOfPassengers < 1)
                     {
                         InputFailed = true;
-                        InputFailMessage += "There must be at least 1 passenger in the input file\n";
+                        InputProcessMessage += "There must be at least 1 passenger in the input file\n";
                     }
                     else
                     {
-
+                        InputProcessMessage += "Passed the no of passengers sanity check\n";
                     }
+
+
 
 
                 }
