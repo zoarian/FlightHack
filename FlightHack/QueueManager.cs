@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -17,6 +18,7 @@ namespace FlightHack
         private static readonly ILog log = LogManager.GetLogger(typeof(App));
 
         public QStatus QStatus;
+        public static int CurrentJobID;
         public static int JobsInQueue;
         public static int JobsInProgress;
         public static int JobsCompleted;
@@ -28,35 +30,13 @@ namespace FlightHack
 
         // Need some way to know which jobs are new
 
-        public QueueManager(string NewFilePath)
+        public QueueManager()
         {
-            CreateWatcher(NewFilePath);
+            CurrentJobID = 0;
+            CreateWatcher(Globals.AppSettings["InputBaseDirectory"]);
             JobQueue = new Queue<Job>();
         }
-
-        /// <summary>
-        /// Used to scan the resources for new jobs
-        /// </summary>
-        public void ScanForNewJobs()
-        {
-            bool NewJobs = false;
-            string NewFilePath = "";
-
-            // Scan:
-            // - discord
-            // - REST request?
-            // - file location
-
-            if (NewJobs)
-            {
-                //CheckAndSanitizeInput(NewFilePath);
-            }
-            else
-            {
-
-            }
-        }
-       
+      
         /// <summary>
         /// A watcher that will scan for new files 
         /// </summary>
@@ -77,22 +57,33 @@ namespace FlightHack
         {
             log.InfoFormat("Found new files: {0}, Path: {1}", e.Name, e.FullPath);
 
-            CheckAndSanitizeInput(e.FullPath, e.Name);
-            // Check the 
+            Input Temp = CheckAndSanitizeInput(e.FullPath, e.Name);
+
+            if(Temp != null)
+            {
+                JobQueue.Enqueue(new Job(++CurrentJobID, Temp, Status.InQueue));
+            }
+
+            // Copy the file to archive location
+            File.Copy(e.FullPath, (Globals.AppSettings["InputArchiveBaseDirectory"] + e.Name));
+
+            // Delete the old file
+            File.Delete(e.FullPath);
         }
 
-
-        private void CheckAndSanitizeInput(string NewFilePath, string FileName)
+        private Input CheckAndSanitizeInput(string NewFilePath, string FileName)
         {
+            Input Input = null; 
+
             // We're only getting JSON files from the filter - no need to check for file type
-            bool InputFailed = false;
+            bool InputPassedMuster = true;
             string InputProcessMessage = "File " + FileName + " \n";
 
             try
             {
                 // Try deserializing the file
                 StreamReader r = new StreamReader(NewFilePath);
-                Input Input = JsonConvert.DeserializeObject<Input>(r.ReadToEnd());
+                Input = JsonConvert.DeserializeObject<Input>(r.ReadToEnd());
 
                 log.Info("Deserialized the new input file");
                 InputProcessMessage += "JSON deserialized successfully\n";
@@ -106,10 +97,11 @@ namespace FlightHack
                 try
                 {
                     int NoOfPassengers = Input.General.NoOfInfantsInLap + Input.General.NoOfInfantsInSeat + Input.General.NoOfYouths + Input.General.NoOfChildren + Input.General.NoOfAdults + Input.General.NoOfSeniors;
-                    
-                    if(NoOfPassengers < 1)
+                    DateTime temp;
+
+                    if (NoOfPassengers < 1)
                     {
-                        InputFailed = true;
+                        InputPassedMuster = false;
                         InputProcessMessage += "There must be at least 1 passenger in the input file\n";
                     }
                     else
@@ -122,36 +114,104 @@ namespace FlightHack
                         // First leg crucial data is not null. Now validate the data
                         if (!Globals.Airports.Any(x => x.Code == Input.FixedLegs[0].OriginCity))
                         {
+                            InputPassedMuster = false;
                             InputProcessMessage += "The origin city of 1st leg does not have a match in the airport list\n";
                         }
 
                         if (!Globals.Airports.Any(x => x.Code == Input.FixedLegs[0].DestinationCity))
                         {
+                            InputPassedMuster = false;
                             InputProcessMessage += "The destination city of 1st leg does not have a match in the airport list\n";
                         }
 
-                        if (Input.FixedLegs[0].Date)
+                        bool IsValidDateLeg1 = DateTime.TryParseExact(Input.FixedLegs[0].Date, "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out temp);
+
+                        if (!IsValidDateLeg1)
                         {
-                            InputProcessMessage += "The destination city of 1st leg does not have a match in the airport list\n";
+                            InputPassedMuster = false;
+                            InputProcessMessage += "The departure date of first leg is invalid\n";
                         }
-
+                    }
+                    else
+                    {
+                        InputPassedMuster = false;
+                        InputProcessMessage += "One of: Origin City, Destination City or Departure Date were not supplied\n";
                     }
 
+                    if(Input.DumpLeg.Date != null)
+                    {
+                        bool IsValidDateDumpLeg = DateTime.TryParseExact(Input.DumpLeg.Date, "dd/MM/yyyy", CultureInfo.InvariantCulture, DateTimeStyles.None, out temp);
 
+                        if (!IsValidDateDumpLeg)
+                        {
+                            InputPassedMuster = false;
+                            InputProcessMessage += "The departure date of first leg is invalid\n";
+                        }
+                    }
+                    else
+                    {
+                        InputPassedMuster = false;
+                        InputProcessMessage += "The departure date of first leg is invalid\n";
+                    }
 
+                    if(Input.Airport.MinDist != null && Input.Airport.MaxDist != null && Input.Airport.MinNoCarriers != null)
+                    {
+                        if(Input.Airport.MinDist < 0 || Input.Airport.MaxDist < 0 || Input.Airport.MinNoCarriers < 0)
+                        {
+                            InputPassedMuster = false;
+                            InputProcessMessage += "Distance/No of carriers cannot be negative\n";
+                        }
 
+                        if (Input.Airport.MinDist >= Input.Airport.MaxDist)
+                        {
+                            InputPassedMuster = false;
+                            InputProcessMessage += "Min distance must be smaller than max distance\n";
+                        }
+                    }
+                    else
+                    {
+                        InputPassedMuster = false;
+                        InputProcessMessage += "One of search paramaters (min, max distance, min no of carriers) has not been defined\n";
+                    }
                 }
                 catch (Exception ex)
                 {
+                    InputPassedMuster = false;
+                    log.ErrorFormat("Failed in processing input: {0}", ex);
+                }
 
+                // Input file is ok, but we need to check if we get any dump legs
+                if (InputPassedMuster)
+                {
+                    List<Tuple<Airport, Airport>> TempDumpLegs= Airport.GetAllDumpConnections(AppSettings["AirortDataFile"], Input.Airport.MinNoCarriers, Input.Airport.MinDist, Input.Airport.MaxDist);
+               
+                    if(TempDumpLegs.Count == 0)
+                    {
+                        InputPassedMuster = false;
+                    }
                 }
             }
             catch (Exception e)
             {
+                InputPassedMuster = false;
                 log.ErrorFormat("Failed to parse file {0}, error: {1}", FileName, e.Message);
-            }
+            }           
 
-            // Input file is ok, but the criteria is too strict and there's no dump legs
+            if(InputPassedMuster)
+            {
+                InputProcessMessage += "Was processed successfully";
+                log.Info(InputProcessMessage);
+
+                // pass the input to new job, queue it
+            }
+            else
+            {
+                log.Error(InputProcessMessage);
+
+                Input = null;
+            }
+        
+            return Input;
         }
 
         public async void CheckQueueStatus()

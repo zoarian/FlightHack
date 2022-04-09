@@ -62,7 +62,17 @@ namespace FlightHack
         public Job(int JobID, Input Input)
         {
             this.ID = JobID;
+            Status = Status.Initial;
             this.Input = Input;
+            this.AllDumpLegs = Airport.GetAllDumpConnections(AppSettings["AirortDataFile"], Input.Airport.MinNoCarriers, Input.Airport.MinDist, Input.Airport.MaxDist);
+        }
+
+        public Job(int JobID, Input Input, Status Status)
+        {
+            this.ID = JobID;
+            this.Status = Status;
+            this.Input = Input;
+            this.AllDumpLegs = Airport.GetAllDumpConnections(AppSettings["AirortDataFile"], Input.Airport.MinNoCarriers, Input.Airport.MinDist, Input.Airport.MaxDist);
         }
 
         public Job(int JobID, string NewFileLocation)
@@ -74,18 +84,6 @@ namespace FlightHack
             this.ID = JobID;
             this.Input = Input;
             this.AllDumpLegs = Airport.GetAllDumpConnections(AppSettings["AirortDataFile"], Input.Airport.MinNoCarriers, Input.Airport.MinDist, Input.Airport.MaxDist);
-        }
-
-        public async Task<Job> ProcessAndPutInQueue(int JobID, string NewFileLocation)
-        {
-            // Check if you can process the input for a job and put in queue
-            StreamReader r = new StreamReader(NewFileLocation);
-            Input Input = JsonConvert.DeserializeObject<Input>(r.ReadToEnd());
-
-            Job Temp = new Job(JobID, Input);
-            Temp.AllDumpLegs = Airport.GetAllDumpConnections(AppSettings["AirortDataFile"], Input.Airport.MinNoCarriers, Input.Airport.MinDist, Input.Airport.MaxDist);
-
-            return Temp;
         }
 
         /// <summary>

@@ -26,9 +26,7 @@ namespace FlightHack
             Globals.MatrixClient = new ItaMatrixHandler(Globals.AppSettings["ItaMatrixConfig"], Globals.AppSettings["ChromeDriverPath"]);
             Globals.Airports = Airport.ProcessFile(Globals.AppSettings["AirortDataFile"]);
 
-            string NewFiles = "C:\\Users\\mikop\\Documents\\Projects\\FlightHack\\InputTest\\";
-
-            QueueManager JobQueue = new QueueManager(NewFiles);
+            QueueManager JobQueue = new QueueManager();
 
             // TODO: Initialize the queueing system. 
             // - Check file location
@@ -43,8 +41,6 @@ namespace FlightHack
 
             while (IsRunning)
             {
-                JobQueue.ScanForNewJobs();
-
                 JobQueue.CheckQueueStatus();
 
                 JobQueue.QueueManagement();
