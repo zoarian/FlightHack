@@ -11,6 +11,7 @@ namespace FlightHack
     {
         public static ItaMatrixHandler MatrixClient;
         public static DiscordClient Disc;
+        public static List<Airport> Airports;
         public static System.Collections.Specialized.NameValueCollection AppSettings; // = ConfigurationManager.AppSettings;
 
         public enum Status

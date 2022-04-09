@@ -24,6 +24,7 @@ namespace FlightHack
             // Client Initialization
             Globals.Disc = new DiscordClient(Globals.AppSettings["DiscordWebhookURL"], Globals.AppSettings["AvatarUrl"]);
             Globals.MatrixClient = new ItaMatrixHandler(Globals.AppSettings["ItaMatrixConfig"], Globals.AppSettings["ChromeDriverPath"]);
+            Globals.Airports = Airport.ProcessFile(Globals.AppSettings["AirortDataFile"]);
 
             string NewFiles = "C:\\Users\\mikop\\Documents\\Projects\\FlightHack\\InputTest\\";
 

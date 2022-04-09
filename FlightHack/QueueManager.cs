@@ -117,6 +117,26 @@ namespace FlightHack
                         InputProcessMessage += "Passed the no of passengers sanity check\n";
                     }
 
+                    if(Input.FixedLegs[0].OriginCity != null && Input.FixedLegs[0].DestinationCity != null && Input.FixedLegs[0].Date != null)
+                    {
+                        // First leg crucial data is not null. Now validate the data
+                        if (!Globals.Airports.Any(x => x.Code == Input.FixedLegs[0].OriginCity))
+                        {
+                            InputProcessMessage += "The origin city of 1st leg does not have a match in the airport list\n";
+                        }
+
+                        if (!Globals.Airports.Any(x => x.Code == Input.FixedLegs[0].DestinationCity))
+                        {
+                            InputProcessMessage += "The destination city of 1st leg does not have a match in the airport list\n";
+                        }
+
+                        if (Input.FixedLegs[0].Date)
+                        {
+                            InputProcessMessage += "The destination city of 1st leg does not have a match in the airport list\n";
+                        }
+
+                    }
+
 
 
 
