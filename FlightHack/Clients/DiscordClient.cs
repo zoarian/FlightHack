@@ -63,10 +63,10 @@ namespace FlightHack
             message.AvatarUrl = AvatarURL;
 
             string JobReport = "Job " + Job.ID + " " + Job.Name + " Job Report\n";
-            JobReport += "Status: " + Job.Status + ". Completed " + Job.CurrentQueryNo + " out of " + Job.TotalNoOfQueries + " queries.";
+            JobReport += "Status: " + Job.Status + ". Completed " + Job.CurrentQueryNo + " out of " + Job.TotalNoOfQueries + " queries.\n";
             JobReport += "Total time taken (s): " + (Job.TotalQueuingTime + Job.TotalProcessingTime) + "\n ";
-            JobReport += "Queue time (s): " + Job.TotalQueuingTime + " (predicted " + Job.EstimatedQueuingTime + ").";
-            JobReport += "Procesing time (s): " + Job.TotalProcessingTime + " (predicted " + Job.EstimatedProcessingTime + ").";
+            JobReport += "Queue time (s): " + Job.TotalQueuingTime + " (predicted " + Job.EstimatedQueuingTime + ").\n";
+            JobReport += "Procesing time (s): " + Job.TotalProcessingTime + " (predicted " + Job.EstimatedProcessingTime + ").\n";
             JobReport += "1st Leg [" + Job.Input.FixedLegs[0].Date + "] " + Job.Input.FixedLegs[0].OriginCity + " -> " + Job.Input.FixedLegs[0].DestinationCity + "\n";
             JobReport += "2nd Leg [" + Job.Input.FixedLegs[1].Date + "] " + Job.Input.FixedLegs[1].OriginCity + " -> " + Job.Input.FixedLegs[1].DestinationCity + "\n";
             JobReport += "Original Fare Price: " + Job.Input.General.OriginalFarePrice + " Currency: " + Job.Input.General.Currency + "\n";

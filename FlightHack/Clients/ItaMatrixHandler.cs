@@ -225,6 +225,7 @@ namespace FlightHack
                         catch (Exception exc)
                         {
                             log.ErrorFormat("{0} -> {1} - the no results timeout wasn't too short. Error: {2}", DumpConnection.Item1.Code, DumpConnection.Item2.Code, exc.Message);
+                            log.Error(exc);
                             CurrentSearch.QueryMessage = exc.Message;
                         }
                     }

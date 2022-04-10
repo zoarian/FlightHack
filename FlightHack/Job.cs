@@ -94,7 +94,7 @@ namespace FlightHack
             // Processing
             this.Status = Status;
             this.CurrentQueryNo = 0;
-            this.TotalNoOfQueries = AllDumpLegs.Count * 2;
+            this.TotalNoOfQueries = AllDumpLegs.Count;
             this.Input = Input;
             this.AllDumpLegs = AllDumpLegs;
             this.NoOfParallelSearches = Globals.MatrixClient.NoOfParallelSearches; // This should really be supplied per job
@@ -137,13 +137,10 @@ namespace FlightHack
             this.Results = new List<Result>();
             this.AllTasks = new List<Task>();
         }
+        
         /// <summary>
         /// Starts a job and returns a task that returns 
         /// </summary>
-        /// <param name="Input"></param>
-        /// <param name="Results"></param>
-        /// <param name="AirortFileLocation"></param>
-        /// <returns></returns>
         public async Task StartJobAsync()
         {
             // Housekeeping
@@ -163,7 +160,9 @@ namespace FlightHack
 
                     if (AllDumpLegs.Count == 1)
                     {
-                        log.InfoFormat("{0}/{1} : dump leg connection {2} -> {3}", ++CurrentQueryNo, AllDumpLegs.Count, AllDumpLegs[0].Item1.Code, AllDumpLegs[0].Item2.Code);
+                        CurrentQueryNo++;
+
+                        log.InfoFormat("{0}/{1} : dump leg connection {2} -> {3}", CurrentQueryNo, AllDumpLegs.Count, AllDumpLegs[0].Item1.Code, AllDumpLegs[0].Item2.Code);
 
                         MatrixClient.IssueQueryAsync(AllDumpLegs[0], Input, Results);
                     }
@@ -191,7 +190,7 @@ namespace FlightHack
                                 {
                                     try
                                     {
-                                        log.InfoFormat("{0}/{1} : dump leg connection {2} -> {3}", CurrentQueryNo, AllDumpLegs.Count, DumpLeg.Item1.Code, DumpLeg.Item2.Code);
+                                        log.InfoFormat("{0}/{1} : dump leg connection {2} -> {3}", ++CurrentQueryNo, AllDumpLegs.Count, DumpLeg.Item1.Code, DumpLeg.Item2.Code);
 
                                         MatrixClient.IssueQueryAsync(DumpLeg, Input, Results);
                                         Thread.Sleep(30);
@@ -203,18 +202,28 @@ namespace FlightHack
                                 }));
                         }
 
-                        // Do the reverse search here
-                        List<Tuple<Airport, Airport>> ReverseDumpLegs = new List<Tuple<Airport, Airport>>();
+                        Task.WaitAll(AllTasks.ToArray());
 
-                        foreach (var DumpLeg in AllDumpLegs)
-                        {
-                            ReverseDumpLegs.Add(new Tuple<Airport, Airport>(DumpLeg.Item2, DumpLeg.Item1));
-                        }
+                        //List<Tuple<Airport, Airport>> ReverseDumpLegs = new List<Tuple<Airport, Airport>>();
+
+                        //ReverseDumpLegs = [t[::- 1] for t in DumpLegs];
+
+                        //l2 = [t[::- 1] for t in l]
+
+                        // TODO: add reverse search here
+                            /*                        List<Tuple<Airport, Airport>> ReverseDumpLegs = new List<Tuple<Airport, Airport>>();
+
+                                                    foreach (var DumpLeg in AllDumpLegs)
+                                                    {
+                                                        ReverseDumpLegs.Add(new Tuple<Airport, Airport>(DumpLeg.Item2, DumpLeg.Item1));
+                                                    }*/
                     }
 
                     watch.Stop();
 
                     TotalProcessingTime = (int)watch.Elapsed.TotalSeconds;
+
+                    log.InfoFormat("Job {0} took {1} seconds to complete", Name, TotalProcessingTime);
                 }
             }
             catch (Exception JobException)
@@ -224,7 +233,7 @@ namespace FlightHack
                 // Dump the current job into json file
             }
 
-            //return this;
+            Status = Status.Completed;
         }
 
         public async Task CompleteJob()

@@ -38,7 +38,7 @@ namespace FlightHack
 
                 JobQueue.QueueManagement();
 
-                Thread.Sleep(10000);
+                Thread.Sleep(100);
             }
 
             Environment.Exit(0);

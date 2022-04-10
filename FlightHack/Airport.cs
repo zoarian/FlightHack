@@ -137,6 +137,7 @@ namespace FlightHack
                     if(DistanceBetweenPair > MinDistance && DistanceBetweenPair < MaxDistance)
                     {
                         DumpConnections.Add(new Tuple<Airport, Airport>(Airports[i], Airports[j]));
+                        DumpConnections.Add(new Tuple<Airport, Airport>(Airports[j], Airports[i]));
                     }
                     else
                     {
