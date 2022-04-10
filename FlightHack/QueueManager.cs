@@ -46,10 +46,18 @@ namespace FlightHack
         {
             //Create a new FileSystemWatcher.
             FileSystemWatcher watcher = new FileSystemWatcher();
-            watcher.NotifyFilter = NotifyFilters.LastWrite;
+            //watcher.NotifyFilter = NotifyFilters.LastWrite;
+            watcher.NotifyFilter =  NotifyFilters.Attributes |
+                                    NotifyFilters.CreationTime |
+                                    NotifyFilters.DirectoryName |
+                                    NotifyFilters.FileName |
+                                    NotifyFilters.LastAccess |
+                                    NotifyFilters.LastWrite |
+                                    NotifyFilters.Security |
+                                    NotifyFilters.Size;
             watcher.Filter = "*.json";
-            //watcher.Created += new FileSystemEventHandler(NewFileDetected);
-            watcher.Changed += new FileSystemEventHandler(NewFileDetected);
+            watcher.Created += new FileSystemEventHandler(NewFileDetected);
+            //watcher.Changed += new FileSystemEventHandler(NewFileDetected);
             watcher.Path = NewFilePath;
             watcher.EnableRaisingEvents = true;
         }
@@ -65,13 +73,21 @@ namespace FlightHack
                 JobQueue.Enqueue(new Job(++CurrentJobID, Temp, Status.InQueue));
             }
 
-            // Copy the file to archive location
-            File.Copy(e.FullPath, (Globals.AppSettings["InputArchiveBaseDirectory"] + e.Name));
+            // TODO: At the moment, file copying affects the file watcher.
+            // We will need some way of copying the file (maybe saving the json as new file?)
+/*
+            try
+            {
+                File.Copy(e.FullPath, (Globals.AppSettings["InputArchiveBaseDirectory"] + e.Name));
 
-            Thread.Sleep(100);
+                Thread.Sleep(10000);
 
-            // Delete the old file
-            File.Delete(e.FullPath);
+                File.Delete(e.FullPath);
+            }
+            catch (Exception ex)
+            {
+                log.ErrorFormat("Failed to copy from {0} to {1} and then delete. Error {2}", e.FullPath, (Globals.AppSettings["InputArchiveBaseDirectory"] + e.Name), ex.Message);
+            }*/
         }
 
         private Input CheckAndSanitizeInput(string NewFilePath, string FileName)
