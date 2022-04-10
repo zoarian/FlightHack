@@ -134,7 +134,7 @@ namespace FlightHack
                     options.AddArgument("no-sandbox");
                     options.AddArgument("ignore-certificate-errors");
                     options.AddArgument("ignore-ssl-errors");
-                    //options.AddArgument("headless");
+                    options.AddArgument("headless");
                     options.AddArgument("disable-extensions");
                     options.AddArgument("test-type");
                     options.AddArgument("excludeSwitches");

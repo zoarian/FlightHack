@@ -1,10 +1,10 @@
 {
-  "Browser": "Edge",
+  "Browser": "Chrome",
   "IsTakingResultScreenshots": false,
   "IsUsingJobTimer": true,
   "IsUsingQueryTimers": true,
   "JsonFileLocation": "C:\\Users\\MP\\Documents\\FlightHack\\Input\\in.json",
-  "NoOfParallelSearches": 12,
+  "NoOfParallelSearches": 6,
   "SearchLimitNoResults": 70,
   "SearchLimitWithResults": 30,
   "SleepTimer": 10,
