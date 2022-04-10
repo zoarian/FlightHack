@@ -41,6 +41,9 @@
     <None Update="Config\ItaMatricClient.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
+    <None Update="Drivers\msedgedriver.exe">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="Input\Query.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>

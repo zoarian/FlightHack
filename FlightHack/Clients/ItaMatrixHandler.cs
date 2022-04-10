@@ -10,6 +10,7 @@ using FlightHack.Query;
 using System.IO;
 using System.Threading.Tasks;
 using log4net;
+using OpenQA.Selenium.Edge;
 
 namespace FlightHack
 {
@@ -123,113 +124,64 @@ namespace FlightHack
 
             try
             {
-                ChromeOptions options = new ChromeOptions();
-                options.AddArgument("log-level=3");
-                options.AddArgument("silent");
-                options.AddArgument("no-sandbox");
-                options.AddArgument("ignore-certificate-errors");
-                options.AddArgument("ignore-ssl-errors");
-                options.AddArgument("headless");
-                options.AddArgument("disable-extensions");
-                options.AddArgument("test-type");
-                options.AddArgument("excludeSwitches");
-                options.AddArgument("start-maximized");
-                options.AddArgument("disable-infobars");
-                options.AddArgument("--disable-extensions");
-                options.AddArgument("--no-sandbox");
-                options.AddArgument("--disable-application-cache");
-                options.AddArgument("--disable-gpu");
-                options.AddArgument("--disable-dev-shm-usage");
+                IWebDriver Driver;
 
-                ChromeDriverService service = ChromeDriverService.CreateDefaultService(DriverPath);
-                service.SuppressInitialDiagnosticInformation = true;
-                service.HideCommandPromptWindow = true;
-
-                IWebDriver Driver = new ChromeDriver(service, options, TimeSpan.FromMinutes(3));
-                Driver.Url = URL;
-
-                WebDriverWait w = new WebDriverWait(Driver, TimeSpan.FromMilliseconds(WebElementTimeout));
-                w.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.Id(MultiCityTabID)));
-
-                IWebElement EMultiButton = Driver.FindElement(By.Id(MultiCityTabID));
-                EMultiButton.Click();
-
-                IWebElement EAddFlights = Driver.FindElement(By.XPath(AddFlightButtonXPath));
-                for (int i = 0; i < Input.FixedLegs.Count; i++) { EAddFlights.Click(); }
-
-                Thread.Sleep(SleepTimer); // Might not be needed
-
-                IWebElement EAdvancedSearchButton = Driver.FindElement(By.XPath(AdvancedButtonID));
-                EAdvancedSearchButton.Click();
-
-                Thread.Sleep(SleepTimer); // Might not be needed
-
-                PupulateLegs(Driver, Input, DumpConnection);
-
-                Thread.Sleep(SleepTimer);
-
-                IWebElement ECurrencyInput = Driver.FindElement(By.Id(CurrencyID));
-                ECurrencyInput.SendKeys(Input.General.Currency);
-                ECurrencyInput.SendKeys(Keys.Enter);
-
-                IWebElement EFinalSearchButton = Driver.FindElement(By.XPath(SearchButtonXpath));
-                EFinalSearchButton.Click();
-
-                // TODO: Change this so we check if either NoResults or QueryResults are returned - asynch maybe?
-                try
+                if(Browser == "Edge")
                 {
-                    w = new WebDriverWait(Driver, TimeSpan.FromSeconds(SearchLimitNoResults));
-                    w.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath(NoResults)));
-#if DEBUG
-                    log.DebugFormat("No flights found for {0} -> {1}", DumpConnection.Item1.Code, DumpConnection.Item2.Code);
-#endif
+                    var options = new EdgeOptions();
+                    options.AddArgument("log-level=3");
+                    options.AddArgument("silent");
+                    options.AddArgument("no-sandbox");
+                    options.AddArgument("ignore-certificate-errors");
+                    options.AddArgument("ignore-ssl-errors");
+                    //options.AddArgument("headless");
+                    options.AddArgument("disable-extensions");
+                    options.AddArgument("test-type");
+                    options.AddArgument("excludeSwitches");
+                    options.AddArgument("start-maximized");
+                    options.AddArgument("disable-infobars");
+                    options.AddArgument("--disable-extensions");
+                    options.AddArgument("--no-sandbox");
+                    options.AddArgument("--disable-application-cache");
+                    options.AddArgument("--disable-gpu");
+                    options.AddArgument("--disable-dev-shm-usage");
+
+                    EdgeDriverService service = EdgeDriverService.CreateDefaultService(DriverPath);
+                    service.SuppressInitialDiagnosticInformation = true;
+                    service.HideCommandPromptWindow = true;
+
+                    Driver = new EdgeDriver(service, options, TimeSpan.FromMinutes(3));
+                    Driver.Url = URL;
                 }
-                catch (Exception ex)
+                else
                 {
-                    try
-                    {
-#if DEBUG
-                        log.DebugFormat("{0} -> {1} - searching for flight prices", DumpConnection.Item1.Code, DumpConnection.Item2.Code);
-#endif
+                    ChromeOptions options = new ChromeOptions();
+                    options.AddArgument("log-level=3");
+                    options.AddArgument("silent");
+                    options.AddArgument("no-sandbox");
+                    options.AddArgument("ignore-certificate-errors");
+                    options.AddArgument("ignore-ssl-errors");
+                    options.AddArgument("headless");
+                    options.AddArgument("disable-extensions");
+                    options.AddArgument("test-type");
+                    options.AddArgument("excludeSwitches");
+                    options.AddArgument("start-maximized");
+                    options.AddArgument("disable-infobars");
+                    options.AddArgument("--disable-extensions");
+                    options.AddArgument("--no-sandbox");
+                    options.AddArgument("--disable-application-cache");
+                    options.AddArgument("--disable-gpu");
+                    options.AddArgument("--disable-dev-shm-usage");
 
-                        w = new WebDriverWait(Driver, TimeSpan.FromSeconds(SearchLimitWithResults));
-                        w.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath(QueryResultXPath)));
+                    ChromeDriverService service = ChromeDriverService.CreateDefaultService(DriverPath);
+                    service.SuppressInitialDiagnosticInformation = true;
+                    service.HideCommandPromptWindow = true;
 
-                        IWebElement ENewPrice = Driver.FindElement(By.XPath(QueryResultXPath));
-
-                        string FoundResult;
-                        CurrentSearch.NewFare = double.Parse(ENewPrice.Text.Trim('£'));
-
-                        if (CurrentSearch.NewFare < Input.General.OriginalFarePrice)
-                            FoundResult = "We've got a cheaper fare: " + CurrentSearch.NewFare + " compared to the original " + Input.General.OriginalFarePrice;
-                        else
-                            FoundResult = "New fare (" + CurrentSearch.NewFare + ") is more expensive than the original " + Input.General.OriginalFarePrice;
-
-                        log.InfoFormat("{0} -> {1} dump leg found a fare. {2}", DumpConnection.Item1.Code, DumpConnection.Item2.Code, FoundResult);
-                    }
-                    catch (Exception e)
-                    {
-#if DEBUG
-                        log.DebugFormat("{0} -> {1} reached timeout for fare finding. Trying to see if the original timeout (for no results) was too short", DumpConnection.Item1.Code, DumpConnection.Item2.Code);
-#endif
-                        try
-                        {
-                            w = new WebDriverWait(Driver, TimeSpan.FromSeconds(5));
-                            w.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath(NoResults)));
-
-#if DEBUG
-                            log.DebugFormat("{0} -> {1} - he original no result timeout was too short", DumpConnection.Item1.Code, DumpConnection.Item2.Code);
-#endif
-                            CurrentSearch.QueryMessage = "The original no result timeout was too short";
-                        }
-                        catch (Exception exc)
-                        {
-                            log.ErrorFormat("{0} -> {1} - the no results timeout wasn't too short. Error: {2}", DumpConnection.Item1.Code, DumpConnection.Item2.Code, exc.Message);
-                            log.Error(exc);
-                            CurrentSearch.QueryMessage = exc.Message;
-                        }
-                    }
+                    Driver = new ChromeDriver(service, options, TimeSpan.FromMinutes(3));
+                    Driver.Url = URL;
                 }
+
+                PopulateAndSearcH(Driver, Input, DumpConnection, CurrentSearch);
 
                 Driver.Quit();
             }
@@ -255,6 +207,93 @@ namespace FlightHack
             AverageQueryTime = AverageQueryTime + (elapsed.TotalSeconds - AverageQueryTime) / (TotalNoOfQueriesPerformed * 1.0);
 
             Results.Add(CurrentSearch);
+        }
+
+        private void PopulateAndSearcH(IWebDriver Driver,Input Input, Tuple<Airport, Airport> DumpConnection, Result CurrentSearch)
+        {
+            WebDriverWait w = new WebDriverWait(Driver, TimeSpan.FromMilliseconds(WebElementTimeout));
+            w.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.Id(MultiCityTabID)));
+
+            IWebElement EMultiButton = Driver.FindElement(By.Id(MultiCityTabID));
+            EMultiButton.Click();
+
+            IWebElement EAddFlights = Driver.FindElement(By.XPath(AddFlightButtonXPath));
+            for (int i = 0; i < Input.FixedLegs.Count; i++) { EAddFlights.Click(); }
+
+            Thread.Sleep(SleepTimer); // Might not be needed
+
+            IWebElement EAdvancedSearchButton = Driver.FindElement(By.XPath(AdvancedButtonID));
+            EAdvancedSearchButton.Click();
+
+            Thread.Sleep(SleepTimer); // Might not be needed
+
+            PupulateLegs(Driver, Input, DumpConnection);
+
+            Thread.Sleep(SleepTimer);
+
+            IWebElement ECurrencyInput = Driver.FindElement(By.Id(CurrencyID));
+            ECurrencyInput.SendKeys(Input.General.Currency);
+            ECurrencyInput.SendKeys(Keys.Enter);
+
+            IWebElement EFinalSearchButton = Driver.FindElement(By.XPath(SearchButtonXpath));
+            EFinalSearchButton.Click();
+
+            // TODO: Change this so we check if either NoResults or QueryResults are returned - asynch maybe?
+            try
+            {
+                w = new WebDriverWait(Driver, TimeSpan.FromSeconds(SearchLimitNoResults));
+                w.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath(NoResults)));
+#if DEBUG
+                log.DebugFormat("No flights found for {0} -> {1}", DumpConnection.Item1.Code, DumpConnection.Item2.Code);
+#endif
+            }
+            catch (Exception ex)
+            {
+                try
+                {
+#if DEBUG
+                    log.DebugFormat("{0} -> {1} - searching for flight prices", DumpConnection.Item1.Code, DumpConnection.Item2.Code);
+#endif
+
+                    w = new WebDriverWait(Driver, TimeSpan.FromSeconds(SearchLimitWithResults));
+                    w.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath(QueryResultXPath)));
+
+                    IWebElement ENewPrice = Driver.FindElement(By.XPath(QueryResultXPath));
+
+                    string FoundResult;
+                    CurrentSearch.NewFare = double.Parse(ENewPrice.Text.Trim('£'));
+
+                    if (CurrentSearch.NewFare < Input.General.OriginalFarePrice)
+                        FoundResult = "We've got a cheaper fare: " + CurrentSearch.NewFare + " compared to the original " + Input.General.OriginalFarePrice;
+                    else
+                        FoundResult = "New fare (" + CurrentSearch.NewFare + ") is more expensive than the original " + Input.General.OriginalFarePrice;
+
+                    log.InfoFormat("{0} -> {1} dump leg found a fare. {2}", DumpConnection.Item1.Code, DumpConnection.Item2.Code, FoundResult);
+                }
+                catch (Exception e)
+                {
+#if DEBUG
+                    log.DebugFormat("{0} -> {1} reached timeout for fare finding. Trying to see if the original timeout (for no results) was too short", DumpConnection.Item1.Code, DumpConnection.Item2.Code);
+#endif
+                    try
+                    {
+                        w = new WebDriverWait(Driver, TimeSpan.FromSeconds(5));
+                        w.Until(SeleniumExtras.WaitHelpers.ExpectedConditions.ElementExists(By.XPath(NoResults)));
+
+#if DEBUG
+                        log.DebugFormat("{0} -> {1} - he original no result timeout was too short", DumpConnection.Item1.Code, DumpConnection.Item2.Code);
+#endif
+                        CurrentSearch.QueryMessage = "The original no result timeout was too short";
+                    }
+                    catch (Exception exc)
+                    {
+                        log.ErrorFormat("{0} -> {1} - the no results timeout wasn't too short. Error: {2}", DumpConnection.Item1.Code, DumpConnection.Item2.Code, exc.Message);
+                        log.Error(exc);
+                        CurrentSearch.QueryMessage = exc.Message;
+                    }
+                }
+            }
+
         }
 
         public void PupulateLegs(IWebDriver Driver, Input Input, Tuple<Airport, Airport> DumpConnection)
