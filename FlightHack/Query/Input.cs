@@ -1,13 +1,10 @@
 ﻿using Newtonsoft.Json;
 using System.Collections.Generic;
 
-
 namespace FlightHack.Query
 {
     public class Input
     {
-        // Root myDeserializedClass = JsonConvert.DeserializeObject<Root>(myJsonResponse);
-
         [JsonProperty("General")]
         public General General { get; set; }
 

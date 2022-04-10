@@ -15,7 +15,7 @@ namespace FlightHack
 {
     public class ItaMatrixHandler
     {
-        private static readonly ILog log = LogManager.GetLogger(typeof(App));
+        private static readonly ILog log = LogManager.GetLogger(typeof(ItaMatrixHandler));
 
         [JsonProperty("Browser")]
         public string Browser { get; set; }
@@ -53,9 +53,6 @@ namespace FlightHack
         [JsonProperty("DriverPath")]
         public string DriverPath { get; set; }
 
-        // This should really go into the Job Class
-        public static int LoopNo { get; set; }
-
         // Inital Search Form IDs and XPaths
         const string MultiCityTabID = "mat-tab-label-0-2";
         const string AddFlightButtonXPath = "/html/body/app-root/matrix-search-page/mat-card[1]/mat-card-content/form/matrix-select-flight-tabs/mat-tab-group/div/mat-tab-body[3]/div/matrix-multi-city-search-tab/div/div[2]/mat-chip";
@@ -66,13 +63,14 @@ namespace FlightHack
         const string QueryResultXPath = "/html/body/app-root/matrix-flights-page/mat-card/mat-card-content/mat-tab-group/div/mat-tab-body[1]/div/div/matrix-result-set-panel/div/div/table/tbody/tr[1]/td[1]/div/button/span[1]";
         const string NoResults = "/html/body/app-root/matrix-flights-page/mat-card/mat-card-content/mat-tab-group/div/mat-tab-body[1]/div/div/matrix-result-set-panel/div/matrix-no-flights-found/div[1]";
 
-        //
+        // Misc but useful data
         const string CurrencyID = "mat-input-6";
         const string DumpLegDateFlexIDButton = "mat-select-32";
         const string PlusMinus2days = "/html/body/div[3]/div[2]/div/div/div/mat-option[5]/span";
 
-        // Add this to the query input
-        public double OriginalFare { get; set; }
+        // For estimation purposes
+        public double AverageQueryTime; // in sec
+        public long TotalNoOfQueriesPerformed; 
 
         public ItaMatrixHandler() { }
 
@@ -94,87 +92,9 @@ namespace FlightHack
             this.WebElementTimeout = temp.WebElementTimeout;
             this.URL = temp.URL;
             this.DriverPath = DriverPath;
-        }
 
-        public async Task<int> StartJobAsync(Input Input, List<Result> Results, string AirortFileLocation)
-        {
-            List<Task> allTasks = new List<Task>();
-            List<Tuple<Airport, Airport>> AllDumpLegs = Airport.GetAllDumpConnections(AirortFileLocation, Input.Airport.MinNoCarriers, Input.Airport.MinDist, Input.Airport.MaxDist);
-            List<Input> InputList = new List<Input>();
-
-            int JobTimeTaken = 0;
-            
-            LoopNo = 0;
-
-            if(AllDumpLegs.Count < 1)
-            {
-                log.InfoFormat("No dump legs found, aborting the job");
-            }
-            else 
-            {
-                var watch = Stopwatch.StartNew();
-
-                if (AllDumpLegs.Count == 1)
-                {
-                    log.InfoFormat("{0}/{1} : dump leg connection {2} -> {3}", ++LoopNo, AllDumpLegs.Count, AllDumpLegs[0].Item1.Code, AllDumpLegs[0].Item2.Code);
-
-                    IssueQueryAsync(AllDumpLegs[0], Input, Results);
-                }
-                else
-                {
-                    
-
-                    if (AllDumpLegs.Count < NoOfParallelSearches)
-                    {
-                        NoOfParallelSearches = AllDumpLegs.Count;
-
-                        log.InfoFormat("Running {0} queries in parallel, lowered to the number of dump legs found", NoOfParallelSearches);
-                    }
-                    else
-                    {
-                        log.InfoFormat("Running {0} queries in parallel", NoOfParallelSearches);
-                    }
-
-                    var throttler = new SemaphoreSlim(initialCount: NoOfParallelSearches);
-
-                    foreach (var DumpLeg in AllDumpLegs)
-                    {
-                        await throttler.WaitAsync();
-
-                        allTasks.Add(
-                            Task.Run(() =>
-                            {
-                                try
-                                {
-                                    log.InfoFormat("{0}/{1} : dump leg connection {2} -> {3}", LoopNo, AllDumpLegs.Count, DumpLeg.Item1.Code, DumpLeg.Item2.Code);
-
-                                    IssueQueryAsync(DumpLeg, Input, Results);
-                                    Thread.Sleep(30);
-                                }
-                                finally
-                                {
-                                    throttler.Release();
-                                }
-                            }));
-                    }
-
-                    // Do the reverse search here
-                    List<Tuple<Airport, Airport>> ReverseDumpLegs = new List<Tuple<Airport, Airport>>();
-
-                    foreach (var DumpLeg in AllDumpLegs)
-                    {
-                        ReverseDumpLegs.Add(new Tuple<Airport, Airport>(DumpLeg.Item2, DumpLeg.Item1));
-                    }
-                }
-
-                watch.Stop();
-
-                JobTimeTaken = (int)watch.Elapsed.TotalSeconds;
-
-                KillChromeDrivers();
-            } 
-
-            return JobTimeTaken;
+            this.AverageQueryTime = 0;
+            this.TotalNoOfQueriesPerformed = 0;
         }
 
         public void KillChromeDrivers()
@@ -191,8 +111,6 @@ namespace FlightHack
 
         public void IssueQueryAsync(Tuple<Airport, Airport> DumpConnection, Input Input, List<Result> Results)
         {
-            LoopNo++;
-
             Result CurrentSearch = new Result();
             CurrentSearch.DistanceBetweenDumpAirports = Airport.DistanceBetweenAirports(DumpConnection.Item1, DumpConnection.Item2);
             CurrentSearch.NewFare = 0;
@@ -282,7 +200,7 @@ namespace FlightHack
                         string FoundResult;
                         CurrentSearch.NewFare = double.Parse(ENewPrice.Text.Trim('£'));
 
-                        if (CurrentSearch.NewFare < OriginalFare)
+                        if (CurrentSearch.NewFare < Input.General.OriginalFarePrice)
                             FoundResult = "We've got a cheaper fare: " + CurrentSearch.NewFare + " compared to the original " + Input.General.OriginalFarePrice;
                         else
                             FoundResult = "New fare (" + CurrentSearch.NewFare + ") is more expensive than the original " + Input.General.OriginalFarePrice;
@@ -307,6 +225,7 @@ namespace FlightHack
                         catch (Exception exc)
                         {
                             log.ErrorFormat("{0} -> {1} - the no results timeout wasn't too short. Error: {2}", DumpConnection.Item1.Code, DumpConnection.Item2.Code, exc.Message);
+                            log.Error(exc);
                             CurrentSearch.QueryMessage = exc.Message;
                         }
                     }
@@ -330,6 +249,10 @@ namespace FlightHack
             QueryTimer.Stop();
             TimeSpan elapsed = QueryTimer.Elapsed;
             CurrentSearch.QueryTime = ((int)elapsed.TotalSeconds).ToString();
+
+            // Calculate Average Query TIme
+            TotalNoOfQueriesPerformed++;
+            AverageQueryTime = AverageQueryTime + (elapsed.TotalSeconds - AverageQueryTime) / (TotalNoOfQueriesPerformed * 1.0);
 
             Results.Add(CurrentSearch);
         }

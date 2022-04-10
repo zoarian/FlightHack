@@ -7,6 +7,7 @@ using Newtonsoft.Json;
 using log4net;
 using log4net.Config;
 using System.Configuration;
+using System.Threading;
 
 namespace FlightHack
 {
@@ -16,32 +17,29 @@ namespace FlightHack
 
         public static async Task Main(string[] args)
         {
-            int JobTimeTaken = 0;
-            int NoOfQueriesPerformed = 0; 
-            string ResultsFileFullPath;
-
-            var AppSettings = ConfigurationManager.AppSettings;
-            XmlConfigurator.Configure(new FileInfo(AppSettings["Log4netLocation"]));
+            Globals.AppSettings = ConfigurationManager.AppSettings;
+            XmlConfigurator.Configure(new FileInfo(Globals.AppSettings["Log4netLocation"]));
 
             log.Info("FlightHack App Startup Was Successfull");
 
-            // Client Initialization
-            List<Result> Results = new List<Result>();
+            // Client initialization
+            Globals.Disc = new DiscordClient(Globals.AppSettings["DiscordWebhookURL"], Globals.AppSettings["AvatarUrl"]);
+            Globals.MatrixClient = new ItaMatrixHandler(Globals.AppSettings["ItaMatrixConfig"], Globals.AppSettings["ChromeDriverPath"]);
+            Globals.Airports = Airport.ProcessFile(Globals.AppSettings["AirortDataFile"]);
 
-            DiscordClient Disc = new DiscordClient(AppSettings["DiscordWebhookURL"], AppSettings["AvatarUrl"]);
-            ItaMatrixHandler MatrixClient = new ItaMatrixHandler(AppSettings["ItaMatrixConfig"], AppSettings["ChromeDriverPath"]);
+            // Start the queue
+            QueueManager JobQueue = new QueueManager();
 
-            StreamReader r = new StreamReader(MatrixClient.JsonFileLocation);
-            Input Input = JsonConvert.DeserializeObject<Input>(r.ReadToEnd());
+            bool IsRunning = true;
 
-            // Perform the job
-            JobTimeTaken = await MatrixClient.StartJobAsync(Input, Results, AppSettings["AirortDataFile"]);
+            while (IsRunning)
+            {
+                JobQueue.CheckQueueStatus();
 
-            // Save the results
-            ResultsFileFullPath = Result.SaveResultsToFile(AppSettings["QueryResultPath"], Results, Input);
+                JobQueue.QueueManagement();
 
-            // Send file to discord
-            Disc.SendResults(ResultsFileFullPath, Input, MatrixClient, ItaMatrixHandler.LoopNo, JobTimeTaken.ToString());
+                Thread.Sleep(100);
+            }
 
             Environment.Exit(0);
         }

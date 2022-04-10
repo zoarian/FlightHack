@@ -10,7 +10,7 @@ namespace FlightHack
 {
     public class Airport
     {
-        private static readonly ILog log = LogManager.GetLogger(typeof(App));
+        private static readonly ILog log = LogManager.GetLogger(typeof(Airport));
 
         [JsonProperty("code")]
         public string Code { get; set; }
@@ -137,6 +137,7 @@ namespace FlightHack
                     if(DistanceBetweenPair > MinDistance && DistanceBetweenPair < MaxDistance)
                     {
                         DumpConnections.Add(new Tuple<Airport, Airport>(Airports[i], Airports[j]));
+                        DumpConnections.Add(new Tuple<Airport, Airport>(Airports[j], Airports[i]));
                     }
                     else
                     {
