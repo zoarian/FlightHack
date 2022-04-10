@@ -5,11 +5,14 @@ using System.Collections.Generic;
 using System.IO;
 using Discord;
 using FlightHack.Query;
+using log4net;
 
 namespace FlightHack
 {
     public class DiscordClient
     {
+        private static readonly ILog log = LogManager.GetLogger(typeof(DiscordClient));
+
         public string WebhookURL { get; set; }
         public string AvatarURL { get; set; }
 

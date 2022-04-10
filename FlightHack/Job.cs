@@ -19,7 +19,7 @@ namespace FlightHack
     /// </summary>
     public class Job
     {
-        private static readonly ILog log = LogManager.GetLogger(typeof(App));
+        private static readonly ILog log = LogManager.GetLogger(typeof(Job));
 
         // To make life easier
         public int ID { get; set; }
@@ -58,23 +58,6 @@ namespace FlightHack
             ID = 0;
             Name = "Initial Job";
         }
-
-        public Job(int JobID, Input Input)
-        {
-            this.ID = JobID;
-            Status = Status.Initial;
-            this.Input = Input;
-            this.AllDumpLegs = Airport.GetAllDumpConnections(AppSettings["AirortDataFile"], Input.Airport.MinNoCarriers, Input.Airport.MinDist, Input.Airport.MaxDist);
-        }
-
-        public Job(int JobID, Input Input, Status Status)
-        {
-            this.ID = JobID;
-            this.Status = Status;
-            this.Input = Input;
-            this.AllDumpLegs = Airport.GetAllDumpConnections(AppSettings["AirortDataFile"], Input.Airport.MinNoCarriers, Input.Airport.MinDist, Input.Airport.MaxDist);
-        }
-
         public Job(int JobID, string NewFileLocation)
         {
             // Check if you can process the input for a job and put in queue
@@ -82,8 +65,51 @@ namespace FlightHack
             Input Input = JsonConvert.DeserializeObject<Input>(r.ReadToEnd());
 
             this.ID = JobID;
+            this.Name = Input.FixedLegs[0].OriginCity.Substring(0, 1) + Input.FixedLegs[0].DestinationCity.Substring(0, 1) + JobID;
             this.Input = Input;
             this.AllDumpLegs = Airport.GetAllDumpConnections(AppSettings["AirortDataFile"], Input.Airport.MinNoCarriers, Input.Airport.MinDist, Input.Airport.MaxDist);
+        }
+        public Job(int JobID, Input Input)
+        {
+            this.ID = JobID;
+            this.Name = Input.FixedLegs[0].OriginCity.Substring(0, 1) + Input.FixedLegs[0].DestinationCity.Substring(0, 1) + JobID;
+            Status = Status.Initial;
+            this.Input = Input;
+            this.AllDumpLegs = Airport.GetAllDumpConnections(AppSettings["AirortDataFile"], Input.Airport.MinNoCarriers, Input.Airport.MinDist, Input.Airport.MaxDist);
+        }
+        public Job(int JobID, Input Input, Status Status)
+        {
+            this.ID = JobID;
+            this.Name = Input.FixedLegs[0].OriginCity.Substring(0, 1) + Input.FixedLegs[0].DestinationCity.Substring(0, 1) + JobID;
+            this.Status = Status;
+            this.Input = Input;
+            this.AllDumpLegs = Airport.GetAllDumpConnections(AppSettings["AirortDataFile"], Input.Airport.MinNoCarriers, Input.Airport.MinDist, Input.Airport.MaxDist);
+        }
+        public Job(int JobID, Input Input, Status Status, List<Tuple<Airport, Airport>> AllDumpLegs)
+        {
+            // ID Parameters
+            this.ID = JobID;
+            this.Name = Input.FixedLegs[0].OriginCity.Substring(0, 1) + Input.FixedLegs[0].DestinationCity.Substring(0, 1) + JobID;
+
+            // Processing
+            this.Status = Status;
+            this.CurrentQueryNo = 0;
+            this.TotalNoOfQueries = AllDumpLegs.Count * 2;
+            this.Input = Input;
+            this.AllDumpLegs = AllDumpLegs;
+            this.NoOfParallelSearches = Globals.MatrixClient.NoOfParallelSearches; // This should really be supplied per job
+
+            // Timekeeping
+            EstimatedProcessingTime = 0;
+            EstimatedQueuingTime = 0; // This needs to be fed from QueueManager -> EstimatedProcessingTime of every job ahead of this one
+            TotalProcessingTime = 0;
+            TotalQueuingTime = 0;
+            Queued = DateTime.Now;
+            Started = DateTime.Now;
+            Completed = DateTime.Now;
+
+            Results = new List<Result>();
+            AllTasks = new List<Task>();
         }
 
         /// <summary>

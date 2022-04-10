@@ -10,7 +10,7 @@ namespace FlightHack
 {
     public class Airport
     {
-        private static readonly ILog log = LogManager.GetLogger(typeof(App));
+        private static readonly ILog log = LogManager.GetLogger(typeof(Airport));
 
         [JsonProperty("code")]
         public string Code { get; set; }

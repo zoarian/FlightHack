@@ -7,6 +7,7 @@ using Newtonsoft.Json;
 using log4net;
 using log4net.Config;
 using System.Configuration;
+using System.Threading;
 
 namespace FlightHack
 {
@@ -21,29 +22,23 @@ namespace FlightHack
 
             log.Info("FlightHack App Startup Was Successfull");
 
-            // Client Initialization
+            // Client initialization
             Globals.Disc = new DiscordClient(Globals.AppSettings["DiscordWebhookURL"], Globals.AppSettings["AvatarUrl"]);
             Globals.MatrixClient = new ItaMatrixHandler(Globals.AppSettings["ItaMatrixConfig"], Globals.AppSettings["ChromeDriverPath"]);
             Globals.Airports = Airport.ProcessFile(Globals.AppSettings["AirortDataFile"]);
 
+            // Start the queue
             QueueManager JobQueue = new QueueManager();
 
-            // TODO: Initialize the queueing system. 
-            // - Check file location
-            // If no files -> idle
-            // If there are files -> check if in queue or not
-            // If files not in queue -> put in queue
-            // If all files are in queue...
-
             bool IsRunning = true;
-
-            Console.Read();
 
             while (IsRunning)
             {
                 JobQueue.CheckQueueStatus();
 
                 JobQueue.QueueManagement();
+
+                Thread.Sleep(10000);
             }
 
             Environment.Exit(0);

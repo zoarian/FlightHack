@@ -15,7 +15,7 @@ namespace FlightHack
 {
     public class ItaMatrixHandler
     {
-        private static readonly ILog log = LogManager.GetLogger(typeof(App));
+        private static readonly ILog log = LogManager.GetLogger(typeof(ItaMatrixHandler));
 
         [JsonProperty("Browser")]
         public string Browser { get; set; }

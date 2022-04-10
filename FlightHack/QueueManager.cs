@@ -16,7 +16,7 @@ namespace FlightHack
 {
     public class QueueManager
     {
-        private static readonly ILog log = LogManager.GetLogger(typeof(App));
+        private static readonly ILog log = LogManager.GetLogger(typeof(QueueManager));
 
         public QStatus QStatus;
         public static int CurrentJobID;
@@ -26,10 +26,9 @@ namespace FlightHack
         public static int JobsFailed;
 
         public string NewInputFile;
-        public static Input InputBuffer;
-        public static Queue<Job> JobQueue; // This will act as out job list
+        public List<Tuple<Airport, Airport>> BufferDumpLegs { get; set; }
 
-        // Need some way to know which jobs are new
+        public static Queue<Job> JobQueue; // First in first out
 
         public QueueManager()
         {
@@ -44,22 +43,28 @@ namespace FlightHack
         /// <param name="NewFilePath"></param>
         private void CreateWatcher(string NewFilePath)
         {
-            //Create a new FileSystemWatcher.
-            FileSystemWatcher watcher = new FileSystemWatcher();
-            //watcher.NotifyFilter = NotifyFilters.LastWrite;
-            watcher.NotifyFilter =  NotifyFilters.Attributes |
-                                    NotifyFilters.CreationTime |
-                                    NotifyFilters.DirectoryName |
-                                    NotifyFilters.FileName |
-                                    NotifyFilters.LastAccess |
-                                    NotifyFilters.LastWrite |
-                                    NotifyFilters.Security |
-                                    NotifyFilters.Size;
-            watcher.Filter = "*.json";
-            watcher.Created += new FileSystemEventHandler(NewFileDetected);
-            //watcher.Changed += new FileSystemEventHandler(NewFileDetected);
-            watcher.Path = NewFilePath;
-            watcher.EnableRaisingEvents = true;
+            try
+            {
+                FileSystemWatcher watcher = new FileSystemWatcher();
+                watcher.NotifyFilter = NotifyFilters.Attributes |
+                                        NotifyFilters.CreationTime |
+                                        NotifyFilters.DirectoryName |
+                                        NotifyFilters.FileName |
+                                        NotifyFilters.LastAccess |
+                                        NotifyFilters.LastWrite |
+                                        NotifyFilters.Security |
+                                        NotifyFilters.Size;
+                watcher.Filter = "*.json";
+                watcher.Created += new FileSystemEventHandler(NewFileDetected);
+                watcher.Path = NewFilePath;
+                watcher.EnableRaisingEvents = true;
+
+                log.Info("File watcher initialized");
+            }
+            catch (Exception ex)
+            {
+                log.ErrorFormat("Failed to initialize file watcher: {0}", ex.Message);
+            }
         }
 
         private void NewFileDetected(object sender, FileSystemEventArgs e)
@@ -70,24 +75,37 @@ namespace FlightHack
 
             if(Temp != null)
             {
-                JobQueue.Enqueue(new Job(++CurrentJobID, Temp, Status.InQueue));
+                JobQueue.Enqueue(new Job(++CurrentJobID, Temp, Status.InQueue, BufferDumpLegs));
             }
 
-            // TODO: At the moment, file copying affects the file watcher.
-            // We will need some way of copying the file (maybe saving the json as new file?)
-/*
+            BufferDumpLegs = null;
+
+            // try copy to see if it works better with creation watcher
             try
             {
-                File.Copy(e.FullPath, (Globals.AppSettings["InputArchiveBaseDirectory"] + e.Name));
-
-                Thread.Sleep(10000);
-
+                Thread.Sleep(200); // TODO: Need to wait for the file to close -> use an event?
                 File.Delete(e.FullPath);
             }
             catch (Exception ex)
             {
                 log.ErrorFormat("Failed to copy from {0} to {1} and then delete. Error {2}", e.FullPath, (Globals.AppSettings["InputArchiveBaseDirectory"] + e.Name), ex.Message);
-            }*/
+            }
+
+            // TODO: At the moment, file copying affects the file watcher.
+            // We will need some way of copying the file (maybe saving the json as new file?)
+            /*
+                        try
+                        {
+                            File.Copy(e.FullPath, (Globals.AppSettings["InputArchiveBaseDirectory"] + e.Name));
+
+                            Thread.Sleep(10000);
+
+                            File.Delete(e.FullPath);
+                        }
+                        catch (Exception ex)
+                        {
+                            log.ErrorFormat("Failed to copy from {0} to {1} and then delete. Error {2}", e.FullPath, (Globals.AppSettings["InputArchiveBaseDirectory"] + e.Name), ex.Message);
+                        }*/
         }
 
         private Input CheckAndSanitizeInput(string NewFilePath, string FileName)
@@ -113,6 +131,7 @@ namespace FlightHack
                 // - we need at least 1 leg, with origin & destination cities + date
                 // - we need at least 1 dump leg with date
                 // - we need ALL search space constraints
+                // TODO: Do checks for each leg
                 try
                 {
                     int NoOfPassengers = Input.General.NoOfInfantsInLap + Input.General.NoOfInfantsInSeat + Input.General.NoOfYouths + Input.General.NoOfChildren + Input.General.NoOfAdults + Input.General.NoOfSeniors;
@@ -202,13 +221,15 @@ namespace FlightHack
                 // Input file is ok, but we need to check if we get any dump legs
                 if (InputPassedMuster)
                 {
-                    List<Tuple<Airport, Airport>> TempDumpLegs= Airport.GetAllDumpConnections(AppSettings["AirortDataFile"], Input.Airport.MinNoCarriers, Input.Airport.MinDist, Input.Airport.MaxDist);
+                    BufferDumpLegs = Airport.GetAllDumpConnections(AppSettings["AirortDataFile"], Input.Airport.MinNoCarriers, Input.Airport.MinDist, Input.Airport.MaxDist);
                
-                    if(TempDumpLegs.Count == 0)
+                    if(BufferDumpLegs.Count == 0)
                     {
                         InputPassedMuster = false;
                     }
                 }
+    
+                // TODO: check if we've already got a job with the same parameters
             }
             catch (Exception e)
             {
@@ -251,7 +272,7 @@ namespace FlightHack
                 Job BottomOfStack = JobQueue.Peek();
 
 #if DEBUG
-                log.DebugFormat("Bottom of the queue stack. Job {0} is {1}", BottomOfStack, BottomOfStack.Status);
+                log.DebugFormat("Bottom of the queue stack. Job {0} is {1}", BottomOfStack.Name, BottomOfStack.Status);
 #endif
 
                 if (BottomOfStack.Status == Status.InProgress)
