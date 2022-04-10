@@ -69,12 +69,17 @@ namespace FlightHack
 
         private void NewFileDetected(object sender, FileSystemEventArgs e)
         {
+            int EstimatedQueuingTime = 0;
+
             log.InfoFormat("Found new files: {0}, Path: {1}", e.Name, e.FullPath);
 
             Input Temp = CheckAndSanitizeInput(e.FullPath, e.Name);
 
             if(Temp != null)
             {
+                // Calculate the estimated queueing time (sum of the process time for all prior jobs)
+                EstimatedQueuingTime = JobQueue.Sum(x => x.EstimatedProcessingTime);
+
                 JobQueue.Enqueue(new Job(++CurrentJobID, Temp, Status.InQueue, BufferDumpLegs));
             }
 

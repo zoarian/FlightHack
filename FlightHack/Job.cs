@@ -100,7 +100,7 @@ namespace FlightHack
             this.NoOfParallelSearches = Globals.MatrixClient.NoOfParallelSearches; // This should really be supplied per job
 
             // Timekeeping
-            EstimatedProcessingTime = 0;
+            EstimatedProcessingTime = (int)Math.Round(TotalNoOfQueries * MatrixClient.AverageQueryTime / (NoOfParallelSearches*1.0));
             EstimatedQueuingTime = 0; // This needs to be fed from QueueManager -> EstimatedProcessingTime of every job ahead of this one
             TotalProcessingTime = 0;
             TotalQueuingTime = 0;
@@ -111,7 +111,32 @@ namespace FlightHack
             Results = new List<Result>();
             AllTasks = new List<Task>();
         }
+        public Job(int JobID, Input Input, Status Status, List<Tuple<Airport, Airport>> AllDumpLegs, int EstimatedQueuingTime)
+        {
+            // ID Parameters
+            this.ID = JobID;
+            this.Name = Input.FixedLegs[0].OriginCity.Substring(0, 1) + Input.FixedLegs[0].DestinationCity.Substring(0, 1) + JobID;
 
+            // Processing
+            this.Status = Status;
+            this.CurrentQueryNo = 0;
+            this.TotalNoOfQueries = AllDumpLegs.Count * 2;
+            this.Input = Input;
+            this.AllDumpLegs = AllDumpLegs;
+            this.NoOfParallelSearches = Globals.MatrixClient.NoOfParallelSearches; // This should really be supplied per job
+
+            // Timekeeping
+            this.EstimatedProcessingTime = (int)Math.Round(TotalNoOfQueries * MatrixClient.AverageQueryTime / (NoOfParallelSearches * 1.0));
+            this.EstimatedQueuingTime = EstimatedQueuingTime;
+            this.TotalProcessingTime = 0;
+            this.TotalQueuingTime = 0;
+            this.Queued = DateTime.Now;
+            this.Started = DateTime.Now;
+            this.Completed = DateTime.Now;
+
+            this.Results = new List<Result>();
+            this.AllTasks = new List<Task>();
+        }
         /// <summary>
         /// Starts a job and returns a task that returns 
         /// </summary>
@@ -121,7 +146,10 @@ namespace FlightHack
         /// <returns></returns>
         public async Task StartJobAsync()
         {
+            // Housekeeping
             Status = Status.InProgress;
+            Started = DateTime.Now;
+            TotalQueuingTime = (int)Math.Round(Started.Subtract(Queued).TotalSeconds);
 
             try
             {
@@ -209,7 +237,10 @@ namespace FlightHack
             // Send over discord
             Globals.Disc.SendResults(ResultsFileFullPath, this);
 
-            Status = Status.Completed; // Only "Complete" the job once we've processed everything - async or no????
+            // Housekeeiping
+            Completed = DateTime.Now;
+            TotalProcessingTime = (int)Math.Round(Completed.Subtract(Started).TotalSeconds);
+            Status = Status.Completed; 
         }
     }
 }

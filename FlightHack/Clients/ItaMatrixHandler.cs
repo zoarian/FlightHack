@@ -53,9 +53,6 @@ namespace FlightHack
         [JsonProperty("DriverPath")]
         public string DriverPath { get; set; }
 
-        // This should really go into the Job Class
-        public static int LoopNo { get; set; }
-
         // Inital Search Form IDs and XPaths
         const string MultiCityTabID = "mat-tab-label-0-2";
         const string AddFlightButtonXPath = "/html/body/app-root/matrix-search-page/mat-card[1]/mat-card-content/form/matrix-select-flight-tabs/mat-tab-group/div/mat-tab-body[3]/div/matrix-multi-city-search-tab/div/div[2]/mat-chip";
@@ -66,10 +63,14 @@ namespace FlightHack
         const string QueryResultXPath = "/html/body/app-root/matrix-flights-page/mat-card/mat-card-content/mat-tab-group/div/mat-tab-body[1]/div/div/matrix-result-set-panel/div/div/table/tbody/tr[1]/td[1]/div/button/span[1]";
         const string NoResults = "/html/body/app-root/matrix-flights-page/mat-card/mat-card-content/mat-tab-group/div/mat-tab-body[1]/div/div/matrix-result-set-panel/div/matrix-no-flights-found/div[1]";
 
-        //
+        // Misc but useful data
         const string CurrencyID = "mat-input-6";
         const string DumpLegDateFlexIDButton = "mat-select-32";
         const string PlusMinus2days = "/html/body/div[3]/div[2]/div/div/div/mat-option[5]/span";
+
+        // For estimation purposes
+        public double AverageQueryTime; // in sec
+        public long TotalNoOfQueriesPerformed; 
 
         public ItaMatrixHandler() { }
 
@@ -91,6 +92,9 @@ namespace FlightHack
             this.WebElementTimeout = temp.WebElementTimeout;
             this.URL = temp.URL;
             this.DriverPath = DriverPath;
+
+            this.AverageQueryTime = 0;
+            this.TotalNoOfQueriesPerformed = 0;
         }
 
         public void KillChromeDrivers()
@@ -107,8 +111,6 @@ namespace FlightHack
 
         public void IssueQueryAsync(Tuple<Airport, Airport> DumpConnection, Input Input, List<Result> Results)
         {
-            LoopNo++;
-
             Result CurrentSearch = new Result();
             CurrentSearch.DistanceBetweenDumpAirports = Airport.DistanceBetweenAirports(DumpConnection.Item1, DumpConnection.Item2);
             CurrentSearch.NewFare = 0;
@@ -246,6 +248,10 @@ namespace FlightHack
             QueryTimer.Stop();
             TimeSpan elapsed = QueryTimer.Elapsed;
             CurrentSearch.QueryTime = ((int)elapsed.TotalSeconds).ToString();
+
+            // Calculate Average Query TIme
+            TotalNoOfQueriesPerformed++;
+            AverageQueryTime = AverageQueryTime + (elapsed.TotalSeconds - AverageQueryTime) / (TotalNoOfQueriesPerformed * 1.0);
 
             Results.Add(CurrentSearch);
         }
