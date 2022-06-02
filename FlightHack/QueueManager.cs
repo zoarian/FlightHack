@@ -331,7 +331,9 @@ namespace FlightHack
                     JobQueue.Enqueue(new Job(JobID, NewInputFile));
                     break;
                 case QStatus.JobInProgress:
+#if DEBUG
                     log.Debug("In Progress");
+#endif
                     break;
                 case QStatus.JobReadyForDeletion:
                     JobQueue.Dequeue();
