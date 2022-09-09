@@ -3,6 +3,7 @@ using Discord.Webhook;*/
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading.Tasks;
 using Discord;
 using FlightHack.Query;
 using log4net;
@@ -55,6 +56,17 @@ namespace FlightHack
 
             message = new DiscordMessage();
             hook.Send(message, new FileInfo(FilePath));
+        }
+
+        public async Task SendTestMessage()
+        {
+            Discord.DiscordMessage message = new Discord.DiscordMessage();
+            message.AvatarUrl = AvatarURL;
+            message.Content = "Client Test Message";
+
+            //await hook.SendAsync(message);
+
+            hook.Send(message);
         }
 
         public void SendResults(string FilePath, Job Job)

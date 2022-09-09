@@ -8,7 +8,6 @@ using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.Support.UI;
 using FlightHack.Query;
 using System.IO;
-using System.Threading.Tasks;
 using log4net;
 using OpenQA.Selenium.Edge;
 
